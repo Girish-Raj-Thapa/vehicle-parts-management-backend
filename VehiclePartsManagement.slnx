@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="VehiclePartsManagement.Application/VehiclePartsManagement.Application.csproj" />
+  <Project Path="VehiclePartsManagement.Domain/VehiclePartsManagement.Domain.csproj" />
+  <Project Path="VehiclePartsManagement.Infrastructure/VehiclePartsManagement.Infrastructure.csproj" />
+  <Project Path="VehiclePartsManagement.Presentation/VehiclePartsManagement.Presentation.csproj" />
+</Solution>
