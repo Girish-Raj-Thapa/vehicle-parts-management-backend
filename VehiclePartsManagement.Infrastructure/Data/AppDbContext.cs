@@ -23,6 +23,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ServiceRecord> ServiceRecords => Set<ServiceRecord>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<PartRequest> PartRequests => Set<PartRequest>();
+    public DbSet<VehicleImage> VehicleImages => Set<VehicleImage>();
+    public DbSet<PartImage> PartImages => Set<PartImage>();
+    public DbSet<PartRequestImage> PartRequestImages => Set<PartRequestImage>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

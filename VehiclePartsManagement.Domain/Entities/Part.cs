@@ -39,4 +39,5 @@ public class Part
     public ICollection<PurchaseItem> PurchaseItems { get; set; } = new List<PurchaseItem>();
     public ICollection<SaleItem> SaleItems { get; set; } = new List<SaleItem>();
     public ICollection<PartRequest> FulfilledPartRequests { get; set; } = new List<PartRequest>();
+    public ICollection<PartImage> PartImages { get; set; } = new List<PartImage>();
 }

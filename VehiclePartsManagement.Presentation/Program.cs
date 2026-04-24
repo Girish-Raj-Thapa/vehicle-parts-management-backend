@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Infrastructure;
+using VehiclePartsManagement.Infrastructure.Config;
 using VehiclePartsManagement.Infrastructure.Data;
 using VehiclePartsManagement.Presentation.Middlewares;
 
@@ -58,6 +61,17 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseMiddleware<ExceptionHandler>();
+
+var imageStorageOptions = app.Services.GetRequiredService<IOptions<ImageStorageOptions>>().Value;
+var imageStorageRoot = Path.Combine(app.Environment.ContentRootPath, imageStorageOptions.RelativeStoragePath);
+Directory.CreateDirectory(imageStorageRoot);
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(imageStorageRoot),
+    RequestPath = imageStorageOptions.RequestPath
+});
+
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

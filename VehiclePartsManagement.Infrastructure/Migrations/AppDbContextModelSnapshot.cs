@@ -214,6 +214,10 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("ProfileImagePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateTime>("RegisteredAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -345,6 +349,46 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.ToTable("PartCompatibility", (string)null);
                 });
 
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartImage", b =>
+                {
+                    b.Property<int>("PartImageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PartImageId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("DisplayOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("ImagePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsPrimary")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PartImageId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("PartId", "IsPrimary");
+
+                    b.ToTable("PartImage", (string)null);
+                });
+
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartRequest", b =>
                 {
                     b.Property<int>("PartRequestId")
@@ -398,6 +442,39 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("CK_PartRequest_RequestStatus_Valid", "\"RequestStatus\" IN ('Pending','Ordered','Received','Completed','Cancelled')");
                         });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartRequestImage", b =>
+                {
+                    b.Property<int>("PartRequestImageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PartRequestImageId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("DisplayOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("ImagePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("PartRequestId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PartRequestImageId");
+
+                    b.HasIndex("PartRequestId");
+
+                    b.ToTable("PartRequestImage", (string)null);
                 });
 
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Payment", b =>
@@ -972,6 +1049,46 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.ToTable("VehicleBrand", (string)null);
                 });
 
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.VehicleImage", b =>
+                {
+                    b.Property<int>("VehicleImageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VehicleImageId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("DisplayOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("ImagePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsPrimary")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<int>("VehicleId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("VehicleImageId");
+
+                    b.HasIndex("VehicleId");
+
+                    b.HasIndex("VehicleId", "IsPrimary");
+
+                    b.ToTable("VehicleImage", (string)null);
+                });
+
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.VehicleModel", b =>
                 {
                     b.Property<int>("VehicleModelId")
@@ -1129,6 +1246,17 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.Navigation("Part");
                 });
 
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartImage", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Part", "Part")
+                        .WithMany("PartImages")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+                });
+
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartRequest", b =>
                 {
                     b.HasOne("VehiclePartsManagement.Domain.Entities.ApplicationUser", "User")
@@ -1152,6 +1280,17 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.Navigation("User");
 
                     b.Navigation("Vehicle");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartRequestImage", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.PartRequest", "PartRequest")
+                        .WithMany("PartRequestImages")
+                        .HasForeignKey("PartRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PartRequest");
                 });
 
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Payment", b =>
@@ -1336,6 +1475,17 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.VehicleImage", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Vehicle", "Vehicle")
+                        .WithMany("VehicleImages")
+                        .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Vehicle");
+                });
+
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.VehicleModel", b =>
                 {
                     b.HasOne("VehiclePartsManagement.Domain.Entities.VehicleBrand", "Brand")
@@ -1372,6 +1522,8 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
 
                     b.Navigation("PartCompatibilities");
 
+                    b.Navigation("PartImages");
+
                     b.Navigation("PurchaseItems");
 
                     b.Navigation("SaleItems");
@@ -1382,6 +1534,11 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartCategory", b =>
                 {
                     b.Navigation("Parts");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartRequest", b =>
+                {
+                    b.Navigation("PartRequestImages");
                 });
 
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Purchase", b =>
@@ -1415,6 +1572,8 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.Navigation("ServiceAppointments");
 
                     b.Navigation("ServiceRecords");
+
+                    b.Navigation("VehicleImages");
                 });
 
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.VehicleBrand", b =>

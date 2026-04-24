@@ -13,6 +13,9 @@ public class ApplicationUser : IdentityUser
     [MaxLength(300)]
     public string Address { get; set; } = string.Empty;
 
+    [MaxLength(500)]
+    public string? ProfileImagePath { get; set; }
+
     [Phone]
     [MaxLength(10)]
     public override string? PhoneNumber { get; set; }

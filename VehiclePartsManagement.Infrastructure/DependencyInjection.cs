@@ -11,6 +11,7 @@ using VehiclePartsManagement.Domain.Entities;
 using VehiclePartsManagement.Infrastructure.Config;
 using VehiclePartsManagement.Infrastructure.Data;
 using VehiclePartsManagement.Infrastructure.Repositories;
+using VehiclePartsManagement.Infrastructure.Services;
 
 namespace VehiclePartsManagement.Infrastructure;
 
@@ -35,8 +36,14 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
 
+        services.AddOptions<ImageStorageOptions>()
+            .Bind(configuration.GetSection(ImageStorageOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IImageStorageService, ImageStorageService>();
         services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
 
         AddJwtAuthentication(services, configuration);

@@ -44,6 +44,7 @@ public class Vehicle
     [ForeignKey(nameof(VehicleModelId))]
     public VehicleModel Model { get; set; } = null!;
 
+    public ICollection<VehicleImage> VehicleImages { get; set; } = new List<VehicleImage>();
     public ICollection<Sale> Sales { get; set; } = new List<Sale>();
     public ICollection<ServiceAppointment> ServiceAppointments { get; set; } = new List<ServiceAppointment>();
     public ICollection<ServiceRecord> ServiceRecords { get; set; } = new List<ServiceRecord>();

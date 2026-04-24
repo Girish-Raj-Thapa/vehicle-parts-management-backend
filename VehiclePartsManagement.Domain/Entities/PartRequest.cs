@@ -37,4 +37,6 @@ public class PartRequest
 
     [ForeignKey(nameof(FulfilledPartId))]
     public Part? FulfilledPart { get; set; }
+
+    public ICollection<PartRequestImage> PartRequestImages { get; set; } = new List<PartRequestImage>();
 }
