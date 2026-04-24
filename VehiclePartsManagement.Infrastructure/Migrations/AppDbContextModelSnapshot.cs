@@ -241,6 +241,804 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Part", b =>
+                {
+                    b.Property<int>("PartId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PartId"));
+
+                    b.Property<int>("CurrentStock")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("LowStockThreshold")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(10);
+
+                    b.Property<int>("PartCategoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PartDescription")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("PartName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<decimal>("SellingPrice")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("PartId");
+
+                    b.HasIndex("PartCategoryId");
+
+                    b.HasIndex("Sku")
+                        .IsUnique();
+
+                    b.ToTable("Part", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Part_CurrentStock_NonNegative", "\"CurrentStock\" >= 0");
+
+                            t.HasCheckConstraint("CK_Part_LowStockThreshold_NonNegative", "\"LowStockThreshold\" >= 0");
+
+                            t.HasCheckConstraint("CK_Part_SellingPrice_NonNegative", "\"SellingPrice\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartCategory", b =>
+                {
+                    b.Property<int>("PartCategoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PartCategoryId"));
+
+                    b.Property<string>("CategoryDescription")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("CategoryName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("PartCategoryId");
+
+                    b.HasIndex("CategoryName")
+                        .IsUnique();
+
+                    b.ToTable("PartCategory", (string)null);
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartCompatibility", b =>
+                {
+                    b.Property<int>("PartId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("VehicleModelId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PartId", "VehicleModelId");
+
+                    b.HasIndex("VehicleModelId");
+
+                    b.ToTable("PartCompatibility", (string)null);
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartRequest", b =>
+                {
+                    b.Property<int>("PartRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PartRequestId"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<int?>("FulfilledPartId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("RequestDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("RequestDescription")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("RequestStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("RequestedPartName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<int?>("VehicleId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PartRequestId");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("FulfilledPartId");
+
+                    b.HasIndex("RequestDate");
+
+                    b.HasIndex("VehicleId");
+
+                    b.ToTable("PartRequest", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PartRequest_RequestStatus_Valid", "\"RequestStatus\" IN ('Pending','Ordered','Received','Completed','Cancelled')");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Payment", b =>
+                {
+                    b.Property<int>("PaymentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PaymentId"));
+
+                    b.Property<decimal>("PaymentAmount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("PaymentNote")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("PaymentReference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PaymentId");
+
+                    b.HasIndex("PaymentDate");
+
+                    b.HasIndex("SaleId");
+
+                    b.ToTable("Payment", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Payment_PaymentAmount_Positive", "\"PaymentAmount\" > 0");
+
+                            t.HasCheckConstraint("CK_Payment_PaymentMethod_Valid", "\"PaymentMethod\" IN ('Cash','Card','BankTransfer','MobileWallet','Cheque','Other')");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Purchase", b =>
+                {
+                    b.Property<int>("PurchaseId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PurchaseId"));
+
+                    b.Property<string>("CreatedByApplicationUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTime>("PurchaseDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("PurchaseInvoiceNo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PurchaseStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<int>("VendorId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PurchaseId");
+
+                    b.HasIndex("CreatedByApplicationUserId");
+
+                    b.HasIndex("PurchaseInvoiceNo")
+                        .IsUnique();
+
+                    b.HasIndex("VendorId");
+
+                    b.ToTable("Purchase", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Purchase_PurchaseStatus_Valid", "\"PurchaseStatus\" IN ('Pending','Ordered','Received','Completed','Cancelled')");
+
+                            t.HasCheckConstraint("CK_Purchase_TotalAmount_NonNegative", "\"TotalAmount\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PurchaseItem", b =>
+                {
+                    b.Property<int>("PurchaseItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PurchaseItemId"));
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PurchaseId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("PurchaseLineTotal")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("QuantityPurchased")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("UnitPriceAtPurchase")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("PurchaseItemId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("PurchaseId");
+
+                    b.ToTable("PurchaseItem", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PurchaseItem_PurchaseLineTotal_NonNegative", "\"PurchaseLineTotal\" >= 0");
+
+                            t.HasCheckConstraint("CK_PurchaseItem_QuantityPurchased_Positive", "\"QuantityPurchased\" > 0");
+
+                            t.HasCheckConstraint("CK_PurchaseItem_UnitPriceAtPurchase_Positive", "\"UnitPriceAtPurchase\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Review", b =>
+                {
+                    b.Property<int>("ReviewId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ReviewId"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReviewComment")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("ReviewDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("ServiceRecordId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ReviewId");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("ServiceRecordId")
+                        .IsUnique();
+
+                    b.ToTable("Review", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Review_Rating_Range", "\"Rating\" >= 1 AND \"Rating\" <= 5");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Sale", b =>
+                {
+                    b.Property<int>("SaleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("SaleId"));
+
+                    b.Property<decimal>("BalanceDue")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<string>("CustomerApplicationUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("LoyaltyDiscountPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(5,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("ProcessedByApplicationUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTime>("SaleDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("SaleInvoiceNo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SaleStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<decimal>("SubTotal")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("TotalAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<int>("VehicleId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("SaleId");
+
+                    b.HasIndex("CustomerApplicationUserId");
+
+                    b.HasIndex("ProcessedByApplicationUserId");
+
+                    b.HasIndex("SaleInvoiceNo")
+                        .IsUnique();
+
+                    b.HasIndex("VehicleId");
+
+                    b.ToTable("Sale", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Sale_BalanceDue_NonNegative", "\"BalanceDue\" >= 0");
+
+                            t.HasCheckConstraint("CK_Sale_DiscountAmount_NonNegative", "\"DiscountAmount\" >= 0");
+
+                            t.HasCheckConstraint("CK_Sale_LoyaltyDiscountPercent_Valid", "\"LoyaltyDiscountPercent\" >= 0 AND \"LoyaltyDiscountPercent\" <= 100");
+
+                            t.HasCheckConstraint("CK_Sale_PaymentStatus_Valid", "\"PaymentStatus\" IN ('Unpaid','PartiallyPaid','Paid','Overdue')");
+
+                            t.HasCheckConstraint("CK_Sale_SaleStatus_Valid", "\"SaleStatus\" IN ('Draft','Confirmed','Completed','Cancelled')");
+
+                            t.HasCheckConstraint("CK_Sale_SubTotal_NonNegative", "\"SubTotal\" >= 0");
+
+                            t.HasCheckConstraint("CK_Sale_TotalAmount_NonNegative", "\"TotalAmount\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.SaleItem", b =>
+                {
+                    b.Property<int>("SaleItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("SaleItemId"));
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("QuantitySold")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("UnitPriceAtSale")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("SaleItemId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("SaleId");
+
+                    b.ToTable("SaleItem", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SaleItem_LineTotal_NonNegative", "\"LineTotal\" >= 0");
+
+                            t.HasCheckConstraint("CK_SaleItem_QuantitySold_Positive", "\"QuantitySold\" > 0");
+
+                            t.HasCheckConstraint("CK_SaleItem_UnitPriceAtSale_Positive", "\"UnitPriceAtSale\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.ServiceAppointment", b =>
+                {
+                    b.Property<int>("ServiceAppointmentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ServiceAppointmentId"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTime>("AppointmentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AppointmentNote")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("AppointmentStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("AppointmentTime")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("AppointmentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("VehicleId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ServiceAppointmentId");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("VehicleId");
+
+                    b.ToTable("ServiceAppointment", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ServiceAppointment_AppointmentStatus_Valid", "\"AppointmentStatus\" IN ('Pending','Confirmed','InProgress','Completed','Cancelled','NoShow')");
+
+                            t.HasCheckConstraint("CK_ServiceAppointment_AppointmentType_Valid", "\"AppointmentType\" IN ('GeneralService','Repair','Inspection','Maintenance','Other')");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.ServiceRecord", b =>
+                {
+                    b.Property<int>("ServiceRecordId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ServiceRecordId"));
+
+                    b.Property<string>("Diagnosis")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<decimal>("LaborCharge")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<int>("MileageAtService")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("NextServiceDueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ServiceAppointmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ServiceDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("ServiceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("VehicleId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WorkDone")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.HasKey("ServiceRecordId");
+
+                    b.HasIndex("ServiceAppointmentId")
+                        .IsUnique();
+
+                    b.HasIndex("VehicleId");
+
+                    b.ToTable("ServiceRecord", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ServiceRecord_LaborCharge_NonNegative", "\"LaborCharge\" >= 0");
+
+                            t.HasCheckConstraint("CK_ServiceRecord_MileageAtService_NonNegative", "\"MileageAtService\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.StockMovement", b =>
+                {
+                    b.Property<int>("StockMovementId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("StockMovementId"));
+
+                    b.Property<DateTime>("MovementDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("MovementQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("MovementType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReferenceId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReferenceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("StockMovementId");
+
+                    b.HasIndex("MovementDate");
+
+                    b.HasIndex("PartId");
+
+                    b.ToTable("StockMovement", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_StockMovement_MovementQuantity_Positive", "\"MovementQuantity\" > 0");
+
+                            t.HasCheckConstraint("CK_StockMovement_MovementType_Valid", "\"MovementType\" IN ('In','Out','Adjustment')");
+
+                            t.HasCheckConstraint("CK_StockMovement_ReferenceType_Valid", "\"ReferenceType\" IN ('Purchase','Sale','ManualAdjustment','Return')");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Vehicle", b =>
+                {
+                    b.Property<int>("VehicleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VehicleId"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("ChassisNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int>("CurrentMileage")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("EngineNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FuelType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int?>("ManufactureYear")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("VehicleModelId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("VehicleNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("VehicleRegisteredAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("VehicleId");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("VehicleModelId");
+
+                    b.HasIndex("VehicleNumber")
+                        .IsUnique();
+
+                    b.ToTable("Vehicle", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Vehicle_CurrentMileage_NonNegative", "\"CurrentMileage\" >= 0");
+
+                            t.HasCheckConstraint("CK_Vehicle_ManufactureYear_Range", "\"ManufactureYear\" IS NULL OR (\"ManufactureYear\" >= 1900 AND \"ManufactureYear\" <= 2100)");
+                        });
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.VehicleBrand", b =>
+                {
+                    b.Property<int>("VehicleBrandId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VehicleBrandId"));
+
+                    b.Property<string>("BrandName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("VehicleBrandId");
+
+                    b.HasIndex("BrandName")
+                        .IsUnique();
+
+                    b.ToTable("VehicleBrand", (string)null);
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.VehicleModel", b =>
+                {
+                    b.Property<int>("VehicleModelId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VehicleModelId"));
+
+                    b.Property<string>("ModelName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("VehicleBrandId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("VehicleModelId");
+
+                    b.HasIndex("VehicleBrandId", "ModelName")
+                        .IsUnique();
+
+                    b.ToTable("VehicleModel", (string)null);
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Vendor", b =>
+                {
+                    b.Property<int>("VendorId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VendorId"));
+
+                    b.Property<string>("ContactPerson")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("VendorAddress")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("VendorEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("VendorName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("VendorPhone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("VendorId");
+
+                    b.ToTable("Vendor", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -301,9 +1099,339 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.Navigation("CreatedByUser");
                 });
 
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Part", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.PartCategory", "Category")
+                        .WithMany("Parts")
+                        .HasForeignKey("PartCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartCompatibility", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Part", "Part")
+                        .WithMany("PartCompatibilities")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.VehicleModel", "Model")
+                        .WithMany("PartCompatibilities")
+                        .HasForeignKey("VehicleModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Model");
+
+                    b.Navigation("Part");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartRequest", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.ApplicationUser", "User")
+                        .WithMany("PartRequests")
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Part", "FulfilledPart")
+                        .WithMany("FulfilledPartRequests")
+                        .HasForeignKey("FulfilledPartId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Vehicle", "Vehicle")
+                        .WithMany("PartRequests")
+                        .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("FulfilledPart");
+
+                    b.Navigation("User");
+
+                    b.Navigation("Vehicle");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Payment", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Sale", "Sale")
+                        .WithMany("Payments")
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Sale");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Purchase", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.ApplicationUser", "CreatedByUser")
+                        .WithMany("CreatedPurchases")
+                        .HasForeignKey("CreatedByApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Vendor", "Vendor")
+                        .WithMany("Purchases")
+                        .HasForeignKey("VendorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Vendor");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PurchaseItem", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Part", "Part")
+                        .WithMany("PurchaseItems")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Purchase", "Purchase")
+                        .WithMany("PurchaseItems")
+                        .HasForeignKey("PurchaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+
+                    b.Navigation("Purchase");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Review", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.ApplicationUser", "User")
+                        .WithMany("Reviews")
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.ServiceRecord", "ServiceRecord")
+                        .WithOne("Review")
+                        .HasForeignKey("VehiclePartsManagement.Domain.Entities.Review", "ServiceRecordId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ServiceRecord");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Sale", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.ApplicationUser", "CustomerUser")
+                        .WithMany("CustomerSales")
+                        .HasForeignKey("CustomerApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.ApplicationUser", "ProcessedByUser")
+                        .WithMany("ProcessedSales")
+                        .HasForeignKey("ProcessedByApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Vehicle", "Vehicle")
+                        .WithMany("Sales")
+                        .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CustomerUser");
+
+                    b.Navigation("ProcessedByUser");
+
+                    b.Navigation("Vehicle");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.SaleItem", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Part", "Part")
+                        .WithMany("SaleItems")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Sale", "Sale")
+                        .WithMany("SaleItems")
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+
+                    b.Navigation("Sale");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.ServiceAppointment", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.ApplicationUser", "User")
+                        .WithMany("ServiceAppointments")
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Vehicle", "Vehicle")
+                        .WithMany("ServiceAppointments")
+                        .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+
+                    b.Navigation("Vehicle");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.ServiceRecord", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.ServiceAppointment", "ServiceAppointment")
+                        .WithOne("ServiceRecord")
+                        .HasForeignKey("VehiclePartsManagement.Domain.Entities.ServiceRecord", "ServiceAppointmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Vehicle", "Vehicle")
+                        .WithMany("ServiceRecords")
+                        .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ServiceAppointment");
+
+                    b.Navigation("Vehicle");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.StockMovement", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Part", "Part")
+                        .WithMany("StockMovements")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Vehicle", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.ApplicationUser", "User")
+                        .WithMany("Vehicles")
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.VehicleModel", "Model")
+                        .WithMany("Vehicles")
+                        .HasForeignKey("VehicleModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Model");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.VehicleModel", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.VehicleBrand", "Brand")
+                        .WithMany("VehicleModels")
+                        .HasForeignKey("VehicleBrandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+                });
+
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.ApplicationUser", b =>
                 {
+                    b.Navigation("CreatedPurchases");
+
                     b.Navigation("CreatedUsers");
+
+                    b.Navigation("CustomerSales");
+
+                    b.Navigation("PartRequests");
+
+                    b.Navigation("ProcessedSales");
+
+                    b.Navigation("Reviews");
+
+                    b.Navigation("ServiceAppointments");
+
+                    b.Navigation("Vehicles");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Part", b =>
+                {
+                    b.Navigation("FulfilledPartRequests");
+
+                    b.Navigation("PartCompatibilities");
+
+                    b.Navigation("PurchaseItems");
+
+                    b.Navigation("SaleItems");
+
+                    b.Navigation("StockMovements");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.PartCategory", b =>
+                {
+                    b.Navigation("Parts");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Purchase", b =>
+                {
+                    b.Navigation("PurchaseItems");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Sale", b =>
+                {
+                    b.Navigation("Payments");
+
+                    b.Navigation("SaleItems");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.ServiceAppointment", b =>
+                {
+                    b.Navigation("ServiceRecord");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.ServiceRecord", b =>
+                {
+                    b.Navigation("Review");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Vehicle", b =>
+                {
+                    b.Navigation("PartRequests");
+
+                    b.Navigation("Sales");
+
+                    b.Navigation("ServiceAppointments");
+
+                    b.Navigation("ServiceRecords");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.VehicleBrand", b =>
+                {
+                    b.Navigation("VehicleModels");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.VehicleModel", b =>
+                {
+                    b.Navigation("PartCompatibilities");
+
+                    b.Navigation("Vehicles");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Vendor", b =>
+                {
+                    b.Navigation("Purchases");
                 });
 #pragma warning restore 612, 618
         }

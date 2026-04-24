@@ -28,4 +28,12 @@ public class ApplicationUser : IdentityUser
     public ApplicationUser? CreatedByUser { get; set; }
 
     public ICollection<ApplicationUser> CreatedUsers { get; set; } = new List<ApplicationUser>();
+
+    public ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
+    public ICollection<Purchase> CreatedPurchases { get; set; } = new List<Purchase>();
+    public ICollection<Sale> CustomerSales { get; set; } = new List<Sale>();
+    public ICollection<Sale> ProcessedSales { get; set; } = new List<Sale>();
+    public ICollection<ServiceAppointment> ServiceAppointments { get; set; } = new List<ServiceAppointment>();
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<PartRequest> PartRequests { get; set; } = new List<PartRequest>();
 }

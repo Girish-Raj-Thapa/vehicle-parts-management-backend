@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Application.DTOs;
+using VehiclePartsManagement.Application.DTOs.Auth;
 using VehiclePartsManagement.Application.Interfaces;
 using VehiclePartsManagement.Domain.Entities;
 

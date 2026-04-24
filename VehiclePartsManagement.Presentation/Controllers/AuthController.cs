@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Application.DTOs;
+using VehiclePartsManagement.Application.DTOs.Auth;
 using VehiclePartsManagement.Application.Interfaces;
 
 namespace VehiclePartsManagement.Presentation.Controllers;

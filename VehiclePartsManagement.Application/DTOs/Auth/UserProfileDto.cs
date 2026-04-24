@@ -1,4 +1,4 @@
-namespace VehiclePartsManagement.Application.DTOs;
+namespace VehiclePartsManagement.Application.DTOs.Auth;
 
 public class UserProfileDto
 {

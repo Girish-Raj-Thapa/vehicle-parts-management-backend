@@ -1,3 +1,5 @@
+using VehiclePartsManagement.Application.DTOs.Auth;
+
 namespace VehiclePartsManagement.Application.DTOs;
 
 public class RefreshResultDto
