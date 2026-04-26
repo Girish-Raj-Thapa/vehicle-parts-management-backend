@@ -12,7 +12,7 @@ public interface IAuthService
     /// <summary>
     /// Registers a new user with the requested role.
     /// </summary>
-    Task<ApiResponse> RegisterAsync(RegisterDto dto, string role);
+    Task<ApiResponse<UserProfileDto>> RegisterAsync(RegisterDto dto, string role);
 
 
     /// <summary>

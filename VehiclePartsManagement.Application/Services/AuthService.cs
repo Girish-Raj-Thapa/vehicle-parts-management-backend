@@ -3,6 +3,7 @@ using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Application.DTOs;
 using VehiclePartsManagement.Application.DTOs.Auth;
 using VehiclePartsManagement.Application.Interfaces;
+using VehiclePartsManagement.Application.Interfaces.Repositories;
 using VehiclePartsManagement.Domain.Entities;
 
 namespace VehiclePartsManagement.Application.Services;
@@ -10,15 +11,22 @@ namespace VehiclePartsManagement.Application.Services;
 public class AuthService(
     UserManager<ApplicationUser> userManager,
     RoleManager<IdentityRole> roleManager,
-    IJwtTokenService jwtTokenService) : IAuthService
+    IJwtTokenService jwtTokenService,
+    IVehicleRepository vehicleRepository,
+    IRepositoryBase<VehicleModel> vehicleModelRepository) : IAuthService
 {
-    public async Task<ApiResponse> RegisterAsync(RegisterDto dto, string role)
+    public async Task<ApiResponse<UserProfileDto>> RegisterAsync(RegisterDto dto, string role)
     {
-        var requestedRole = role.Trim();
+        var requestedRole = string.IsNullOrWhiteSpace(role) ? "Customer" : role.Trim();
+        if (!string.Equals(requestedRole, "Customer", StringComparison.OrdinalIgnoreCase))
+        {
+            return ApiResponse<UserProfileDto>.FailureResponse("Customer self-registration can only create Customer accounts.");
+        }
+
         var roleEntity = await roleManager.FindByNameAsync(requestedRole);
         if (roleEntity?.Name is null)
         {
-            return ApiResponse.FailureResponse(
+            return ApiResponse<UserProfileDto>.FailureResponse(
                 message: "Invalid role selected.",
                 errors: new Dictionary<string, List<string>>
                 {
@@ -29,7 +37,16 @@ public class AuthService(
         var existingUser = await userManager.FindByEmailAsync(dto.Email);
         if (existingUser != null)
         {
-            return ApiResponse.FailureResponse("User with this email already exists.");
+            return ApiResponse<UserProfileDto>.FailureResponse("User with this email already exists.");
+        }
+
+        if (dto.Vehicle is not null)
+        {
+            var vehicleValidation = await ValidateVehicleAsync(dto.Vehicle.VehicleModelId, dto.Vehicle.VehicleNumber);
+            if (vehicleValidation is not null)
+            {
+                return ApiResponse<UserProfileDto>.FailureResponse(vehicleValidation);
+            }
         }
 
         var user = new ApplicationUser
@@ -46,7 +63,7 @@ public class AuthService(
         var result = await userManager.CreateAsync(user, dto.Password);
         if (!result.Succeeded)
         {
-            return ApiResponse.FailureResponse(
+            return ApiResponse<UserProfileDto>.FailureResponse(
                 message: "User registration failed.",
                 errors: new Dictionary<string, List<string>>
                 {
@@ -60,7 +77,7 @@ public class AuthService(
             // Roll back user creation to avoid leaving a user without intended role assignment.
             await userManager.DeleteAsync(user);
 
-            return ApiResponse.FailureResponse(
+            return ApiResponse<UserProfileDto>.FailureResponse(
                 message: "User registration failed.",
                 errors: new Dictionary<string, List<string>>
                 {
@@ -68,7 +85,34 @@ public class AuthService(
                 });
         }
 
-        return ApiResponse.SuccessResponse("User created successfully.");
+        if (dto.Vehicle is not null)
+        {
+            vehicleRepository.Create(new Vehicle
+            {
+                ApplicationUserId = user.Id,
+                VehicleModelId = dto.Vehicle.VehicleModelId,
+                VehicleNumber = dto.Vehicle.VehicleNumber,
+                ManufactureYear = dto.Vehicle.ManufactureYear,
+                EngineNumber = dto.Vehicle.EngineNumber,
+                ChassisNumber = dto.Vehicle.ChassisNumber,
+                FuelType = dto.Vehicle.FuelType,
+                Color = dto.Vehicle.Color,
+                CurrentMileage = dto.Vehicle.CurrentMileage,
+                VehicleRegisteredAt = DateTime.UtcNow
+            });
+            await vehicleRepository.SaveChangesAsync();
+        }
+
+        return ApiResponse<UserProfileDto>.SuccessResponse(new UserProfileDto
+        {
+            UserId = user.Id,
+            FullName = user.FullName,
+            Email = user.Email ?? string.Empty,
+            PhoneNumber = user.PhoneNumber ?? string.Empty,
+            Address = user.Address,
+            IsActive = user.IsActive,
+            Roles = [roleEntity.Name]
+        }, "Customer registered successfully.");
     }
 
 
@@ -151,7 +195,25 @@ public class AuthService(
             UserId = user.Id,
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
+            PhoneNumber = user.PhoneNumber ?? string.Empty,
+            Address = user.Address,
+            IsActive = user.IsActive,
             Roles = roles.ToList()
-        });
+        }, "Current user retrieved successfully.");
+    }
+
+
+    private async Task<string?> ValidateVehicleAsync(int modelId, string vehicleNumber)
+    {
+        if (await vehicleModelRepository.GetByIdAsync(modelId) is null)
+        {
+            return "Vehicle model not found.";
+        }
+
+        var vehicleExists = vehicleRepository
+            .FindByCondition(v => v.VehicleNumber == vehicleNumber)
+            .Any();
+
+        return vehicleExists ? "Vehicle number already exists." : null;
     }
 }
