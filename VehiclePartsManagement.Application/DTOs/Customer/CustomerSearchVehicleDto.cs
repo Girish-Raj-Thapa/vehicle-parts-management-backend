@@ -1,5 +1,8 @@
 namespace VehiclePartsManagement.Application.DTOs.Customer;
 
+/// <summary>
+/// Vehicle details embedded in customer search results.
+/// </summary>
 public class CustomerSearchVehicleDto
 {
     public int VehicleId { get; set; }

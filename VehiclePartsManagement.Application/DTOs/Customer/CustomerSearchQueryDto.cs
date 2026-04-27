@@ -2,6 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace VehiclePartsManagement.Application.DTOs.Customer;
 
+/// <summary>
+/// Query contract for staff/admin customer search endpoint.
+/// </summary>
 public class CustomerSearchQueryDto
 {
     [Required]

@@ -7,6 +7,10 @@ namespace VehiclePartsManagement.Application.Interfaces.Services;
 public interface IUserService
 {
     Task<PagedResponse<List<UserListItemDto>>> GetPagedAsync(int page, int pageSize, string? role, string? search);
+    /// <summary>
+    /// Searches customer profiles for staff/admin workflows using paged output.
+    /// </summary>
+    Task<PagedResponse<List<CustomerSearchItemDto>>> SearchCustomersAsync(CustomerSearchQueryDto dto);
     Task<ApiResponse<UserDetailDto>> GetByIdAsync(string userId);
     Task<ApiResponse<UserDetailDto>> CreateStaffAsync(CreateStaffDto dto);
     Task<ApiResponse<UserIdResponseDto>> UpdateAsync(string userId, UpdateUserDto dto);
