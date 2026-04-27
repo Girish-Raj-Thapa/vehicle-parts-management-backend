@@ -7,4 +7,10 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 [Route("api/sales")]
 public class SalesController(ISaleService saleService) : ControllerBase
 {
+    [HttpPost("{saleId}/send-email")]
+    public async Task<IActionResult> SendEmail(int saleId)
+    {
+        var response = await saleService.SendInvoiceEmailAsync(saleId);
+        return Ok(response);
+    }
 }
