@@ -30,12 +30,17 @@ public class NotificationService(
             }
 
             var subject = "Reminder: Overdue Credit Payment";
-            var body = $"Hello {sale.CustomerUser.FullName},\n\n" +
-                       $"This is a reminder that your payment for Sale #{sale.SaleInvoiceNo} is overdue.\n" +
-                       $"Balance Due: {sale.BalanceDue:C}\n" +
-                       $"Due Date: {sale.DueDate?.ToShortDateString()}\n\n" +
-                       $"Please settle the payment as soon as possible.\n\n" +
-                       $"Regards,\nVehicle Parts Management Team";
+            var body = $@"
+                <div style='font-family: Arial, sans-serif;'>
+                    <h3>Hello {sale.CustomerUser.FullName},</h3>
+                    <p>This is a reminder that your payment for <strong>Sale #{sale.SaleInvoiceNo}</strong> is overdue.</p>
+                    <p>
+                        <strong>Balance Due:</strong> {sale.BalanceDue:C}<br/>
+                        <strong>Due Date:</strong> {sale.DueDate?.ToShortDateString()}
+                    </p>
+                    <p>Please settle the payment as soon as possible to avoid any service interruptions.</p>
+                    <p>Regards,<br/><strong>Vehicle Parts Management Team</strong></p>
+                </div>";
 
             var sent = await emailService.SendEmailAsync(sale.CustomerUser.Email, subject, body);
             if (sent)
@@ -61,19 +66,22 @@ public class NotificationService(
 
         if (partList.Count > 0)
         {
-            var adminEmail = "admin@vehicleparts.com"; // Targeted notification for staff/admin
+            var adminEmail = "awantikapokharel46@gmail.com"; // Updated for testing
             var subject = "Alert: Low Stock Inventory Report";
             var body = new StringBuilder();
-            body.AppendLine("The following parts are below their minimum threshold:");
-            body.AppendLine();
+            body.AppendLine("<div style='font-family: Arial, sans-serif;'>");
+            body.AppendLine("<h3>Low Stock Alert</h3>");
+            body.AppendLine("<p>The following parts are below their minimum threshold:</p>");
+            body.AppendLine("<ul>");
             
             foreach (var part in partList)
             {
-                body.AppendLine($"- {part.PartName} (SKU: {part.Sku}): {part.CurrentStock} left (Threshold: {part.LowStockThreshold})");
+                body.AppendLine($"<li><strong>{part.PartName}</strong> (SKU: {part.Sku}): <span style='color: red;'>{part.CurrentStock} left</span> (Threshold: {part.LowStockThreshold})</li>");
             }
             
-            body.AppendLine();
-            body.AppendLine("Please restock these items soon.");
+            body.AppendLine("</ul>");
+            body.AppendLine("<p>Please restock these items soon.</p>");
+            body.AppendLine("</div>");
 
             result.EmailSent = await emailService.SendEmailAsync(adminEmail, subject, body.ToString());
         }
