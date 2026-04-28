@@ -26,4 +26,12 @@ public class SaleRepository(AppDbContext context)
             .Where(s => s.BalanceDue > 0 && s.DueDate < today)
             .ToListAsync();
     }
+
+    public async Task<IEnumerable<Sale>> GetAllSalesAsync()
+    {
+        return await Context.Sales
+            .Include(s => s.CustomerUser)
+            .OrderByDescending(s => s.SaleDate)
+            .ToListAsync();
+    }
 }

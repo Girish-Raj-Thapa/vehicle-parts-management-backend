@@ -6,4 +6,5 @@ public interface ISaleRepository : IRepositoryBase<Sale>
 {
     Task<Sale?> GetSaleWithDetailsAsync(int saleId);
     Task<IEnumerable<Sale>> GetOverdueSalesAsync();
+    Task<IEnumerable<Sale>> GetAllSalesAsync();
 }
