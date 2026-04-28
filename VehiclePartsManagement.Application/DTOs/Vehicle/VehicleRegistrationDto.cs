@@ -5,8 +5,13 @@ namespace VehiclePartsManagement.Application.DTOs.Vehicle;
 
 public class VehicleRegistrationDto
 {
-    [Required]
-    public int VehicleModelId { get; set; }
+    public int? ModelId { get; set; }
+
+    [MaxLength(100)]
+    public string BrandName { get; set; } = string.Empty;
+
+    [MaxLength(100)]
+    public string ModelName { get; set; } = string.Empty;
 
     [Required]
     [MaxLength(50)]

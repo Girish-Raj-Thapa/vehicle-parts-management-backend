@@ -14,7 +14,8 @@ public class UserService(
     UserManager<ApplicationUser> userManager,
     RoleManager<IdentityRole> roleManager,
     IVehicleRepository vehicleRepository,
-    IRepositoryBase<VehicleModel> vehicleModelRepository) : IUserService
+    IRepositoryBase<VehicleModel> vehicleModelRepository,
+    IRepositoryBase<VehicleBrand> vehicleBrandRepository) : IUserService
 {
     private static readonly string[] StaffCreatableRoles = ["Admin", "Staff"];
 
@@ -241,7 +242,7 @@ public class UserService(
             return ApiResponse<CustomerVehicleRegistrationResponseDto>.FailureResponse("User with this email already exists.");
         }
 
-        var vehicleValidation = await ValidateVehicleAsync(dto.Vehicle.VehicleModelId, dto.Vehicle.VehicleNumber);
+        var vehicleValidation = await ValidateVehicleAsync(dto.Vehicle.VehicleNumber);
         if (vehicleValidation is not null)
         {
             return ApiResponse<CustomerVehicleRegistrationResponseDto>.FailureResponse(vehicleValidation);
@@ -274,10 +275,17 @@ public class UserService(
             return IdentityFailure<CustomerVehicleRegistrationResponseDto>("Customer registration failed.", roleResult);
         }
 
+        var (modelId, errorMessage) = await ResolveVehicleModelIdAsync(dto.Vehicle);
+        if (errorMessage is not null)
+        {
+            await userManager.DeleteAsync(customer);
+            return ApiResponse<CustomerVehicleRegistrationResponseDto>.FailureResponse(errorMessage);
+        }
+
         var vehicle = new Vehicle
         {
             ApplicationUserId = customer.Id,
-            VehicleModelId = dto.Vehicle.VehicleModelId,
+            VehicleModelId = modelId,
             VehicleNumber = dto.Vehicle.VehicleNumber,
             ManufactureYear = dto.Vehicle.ManufactureYear,
             EngineNumber = dto.Vehicle.EngineNumber,
@@ -337,18 +345,62 @@ public class UserService(
     }
 
 
-    private async Task<string?> ValidateVehicleAsync(int modelId, string vehicleNumber)
+    private Task<string?> ValidateVehicleAsync(string vehicleNumber)
     {
-        if (await vehicleModelRepository.GetByIdAsync(modelId) is null)
-        {
-            return "Vehicle model not found.";
-        }
-
         var vehicleExists = vehicleRepository
             .FindByCondition(v => v.VehicleNumber == vehicleNumber)
             .Any();
 
-        return vehicleExists ? "Vehicle number already exists." : null;
+        return Task.FromResult(vehicleExists ? "Vehicle number already exists." : null);
+    }
+
+
+    private async Task<(int ModelId, string? ErrorMessage)> ResolveVehicleModelIdAsync(
+        VehiclePartsManagement.Application.DTOs.Vehicle.VehicleRegistrationDto dto)
+    {
+        if (dto.ModelId is > 0)
+        {
+            var existingModel = await vehicleModelRepository.GetByIdAsync(dto.ModelId.Value);
+            return existingModel is null
+                ? (0, "Vehicle model not found.")
+                : (existingModel.VehicleModelId, null);
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.BrandName) || string.IsNullOrWhiteSpace(dto.ModelName))
+        {
+            return (0, "Either modelId or both brandName and modelName are required.");
+        }
+
+        var brandName = dto.BrandName.Trim();
+        var modelName = dto.ModelName.Trim();
+
+        var brand = vehicleBrandRepository
+            .FindByCondition(b => b.BrandName == brandName, trackChanges: true)
+            .FirstOrDefault();
+
+        if (brand is null)
+        {
+            brand = new VehicleBrand { BrandName = brandName };
+            vehicleBrandRepository.Create(brand);
+            await vehicleBrandRepository.SaveChangesAsync();
+        }
+
+        var model = vehicleModelRepository
+            .FindByCondition(m => m.VehicleBrandId == brand.VehicleBrandId && m.ModelName == modelName, trackChanges: true)
+            .FirstOrDefault();
+
+        if (model is null)
+        {
+            model = new VehicleModel
+            {
+                VehicleBrandId = brand.VehicleBrandId,
+                ModelName = modelName
+            };
+            vehicleModelRepository.Create(model);
+            await vehicleModelRepository.SaveChangesAsync();
+        }
+
+        return (model.VehicleModelId, null);
     }
 
 
