@@ -1,7 +1,192 @@
+using VehiclePartsManagement.Application.Common;
+using VehiclePartsManagement.Application.DTOs.ServiceAppointment;
+using VehiclePartsManagement.Application.Interfaces.Repositories;
 using VehiclePartsManagement.Application.Interfaces.Services;
+using VehiclePartsManagement.Domain.Entities;
+using VehiclePartsManagement.Domain.Enums;
 
 namespace VehiclePartsManagement.Application.Services;
 
-public class ServiceAppointmentService : IServiceAppointmentService
+public class ServiceAppointmentService(IServiceAppointmentRepository serviceAppointmentRepository) : IServiceAppointmentService
 {
+    /// <summary>
+    /// Creates a new service appointment under the provided customer scope.
+    /// </summary>
+    public async Task<ApiResponse<ServiceAppointmentCreateResponseDto>> CreateAsync(
+        CreateServiceAppointmentDto dto,
+        string applicationUserId)
+    {
+        if (!await serviceAppointmentRepository.IsVehicleOwnedByUserAsync(dto.VehicleId, applicationUserId))
+        {
+            return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
+                "Selected vehicle does not belong to the current user.",
+                new Dictionary<string, List<string>>
+                {
+                    { "vehicleId", ["Selected vehicle does not belong to the current user."] }
+                });
+        }
+
+        if (dto.AppointmentDate < DateOnly.FromDateTime(DateTime.UtcNow))
+        {
+            return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
+                "Appointment date cannot be in the past.",
+                new Dictionary<string, List<string>>
+                {
+                    { "appointmentDate", ["Appointment date cannot be in the past."] }
+                });
+        }
+
+        if (!TimeOnly.TryParse(dto.AppointmentTime, out _))
+        {
+            return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
+                "Appointment time is invalid.",
+                new Dictionary<string, List<string>>
+                {
+                    { "appointmentTime", ["Appointment time is invalid."] }
+                });
+        }
+
+        if (!Enum.TryParse<ServiceAppointmentType>(dto.AppointmentType, true, out var appointmentType))
+        {
+            return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
+                "Appointment type is invalid.",
+                new Dictionary<string, List<string>>
+                {
+                    { "appointmentType", ["Appointment type is invalid."] }
+                });
+        }
+
+        var appointment = new ServiceAppointment
+        {
+            ApplicationUserId = applicationUserId,
+            VehicleId = dto.VehicleId,
+            AppointmentDate = dto.AppointmentDate.ToDateTime(TimeOnly.MinValue),
+            AppointmentTime = dto.AppointmentTime.Trim(),
+            AppointmentType = appointmentType,
+            AppointmentStatus = ServiceAppointmentStatus.Pending,
+            AppointmentNote = dto.AppointmentNote
+        };
+
+        serviceAppointmentRepository.Create(appointment);
+        await serviceAppointmentRepository.SaveChangesAsync();
+
+        return ApiResponse<ServiceAppointmentCreateResponseDto>.SuccessResponse(
+            new ServiceAppointmentCreateResponseDto
+            {
+                AppointmentId = appointment.ServiceAppointmentId,
+                AppointmentStatus = appointment.AppointmentStatus.ToString()
+            },
+            "Appointment booked successfully");
+    }
+
+
+    /// <summary>
+    /// Returns paged appointments with optional owner and status filtering.
+    /// </summary>
+    public async Task<PagedResponse<List<ServiceAppointmentListItemDto>>> GetPagedAsync(
+        ServiceAppointmentQueryDto query,
+        string? applicationUserId)
+    {
+        var page = query.Page < 1 ? 1 : query.Page;
+        var pageSize = query.PageSize is < 1 or > 100 ? 10 : query.PageSize;
+
+        ServiceAppointmentStatus? status = null;
+        if (!string.IsNullOrWhiteSpace(query.Status))
+        {
+            if (!Enum.TryParse<ServiceAppointmentStatus>(query.Status, true, out var parsedStatus))
+            {
+                return PagedFailure(
+                    "Appointment status is invalid.",
+                    "status");
+            }
+
+            status = parsedStatus;
+        }
+
+        var scopedUserId = query.Mine ? applicationUserId : null;
+        var (items, totalItems) = await serviceAppointmentRepository.GetPagedAsync(page, pageSize, scopedUserId, status);
+
+        var data = items.Select(MapListItem).ToList();
+
+        return PagedResponse<List<ServiceAppointmentListItemDto>>.SuccessPagedResponse(
+            data,
+            new PaginationMeta
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
+            },
+            "Appointments retrieved successfully");
+    }
+
+
+    /// <summary>
+    /// Returns one appointment detail, optionally constrained to a specific owner scope.
+    /// </summary>
+    public async Task<ApiResponse<ServiceAppointmentDetailDto>> GetByIdAsync(
+        int appointmentId,
+        string? applicationUserId)
+    {
+        var appointment = string.IsNullOrWhiteSpace(applicationUserId)
+            ? await serviceAppointmentRepository.GetByIdWithDetailsAsync(appointmentId)
+            : await serviceAppointmentRepository.GetByIdForUserAsync(appointmentId, applicationUserId);
+
+        if (appointment is null)
+        {
+            return ApiResponse<ServiceAppointmentDetailDto>.FailureResponse("Appointment not found.");
+        }
+
+        return ApiResponse<ServiceAppointmentDetailDto>.SuccessResponse(
+            MapDetail(appointment),
+            "Appointment retrieved successfully");
+    }
+
+
+    private static ServiceAppointmentListItemDto MapListItem(ServiceAppointment appointment) =>
+        new()
+        {
+            AppointmentId = appointment.ServiceAppointmentId,
+            CustomerName = appointment.User.FullName,
+            VehicleNumber = appointment.Vehicle.VehicleNumber,
+            VehicleName = $"{appointment.Vehicle.Model.Brand.BrandName} {appointment.Vehicle.Model.ModelName}",
+            AppointmentDate = DateOnly.FromDateTime(appointment.AppointmentDate),
+            AppointmentTime = appointment.AppointmentTime,
+            AppointmentType = appointment.AppointmentType.ToString(),
+            AppointmentStatus = appointment.AppointmentStatus.ToString(),
+            AppointmentNote = appointment.AppointmentNote
+        };
+
+
+    private static ServiceAppointmentDetailDto MapDetail(ServiceAppointment appointment) =>
+        new()
+        {
+            AppointmentId = appointment.ServiceAppointmentId,
+            UserId = appointment.ApplicationUserId,
+            CustomerName = appointment.User.FullName,
+            VehicleId = appointment.VehicleId,
+            VehicleNumber = appointment.Vehicle.VehicleNumber,
+            VehicleName = $"{appointment.Vehicle.Model.Brand.BrandName} {appointment.Vehicle.Model.ModelName}",
+            AppointmentDate = DateOnly.FromDateTime(appointment.AppointmentDate),
+            AppointmentTime = appointment.AppointmentTime,
+            AppointmentType = appointment.AppointmentType.ToString(),
+            AppointmentStatus = appointment.AppointmentStatus.ToString(),
+            AppointmentNote = appointment.AppointmentNote
+        };
+
+
+    private static PagedResponse<List<ServiceAppointmentListItemDto>> PagedFailure(
+        string message,
+        string errorKey) =>
+        new()
+        {
+            Success = false,
+            Message = message,
+            Errors = new Dictionary<string, List<string>>
+            {
+                { errorKey, [message] }
+            },
+            Data = new List<ServiceAppointmentListItemDto>(),
+            Pagination = new PaginationMeta()
+        };
 }
