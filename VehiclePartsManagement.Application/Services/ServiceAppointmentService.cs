@@ -60,7 +60,9 @@ public class ServiceAppointmentService(IServiceAppointmentRepository serviceAppo
         {
             ApplicationUserId = applicationUserId,
             VehicleId = dto.VehicleId,
-            AppointmentDate = dto.AppointmentDate.ToDateTime(TimeOnly.MinValue),
+            AppointmentDate = DateTime.SpecifyKind(
+                dto.AppointmentDate.ToDateTime(TimeOnly.MinValue),
+                DateTimeKind.Utc),
             AppointmentTime = dto.AppointmentTime.Trim(),
             AppointmentType = appointmentType,
             AppointmentStatus = ServiceAppointmentStatus.Pending,
