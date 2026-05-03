@@ -29,4 +29,11 @@ public class CustomersController(IUserService userService) : ControllerBase
             ? Ok(result)
             : NotFound(ApiResponse<CustomerHistoryDto>.FailureResponse(result.Message, result.Errors));
     }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] CustomerSearchQueryDto dto)
+    {
+        var result = await userService.SearchCustomersAsync(dto);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 }

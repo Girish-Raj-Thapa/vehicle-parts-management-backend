@@ -13,11 +13,13 @@ namespace VehiclePartsManagement.Application.Services;
 public class UserService(
     UserManager<ApplicationUser> userManager,
     RoleManager<IdentityRole> roleManager,
+    IUserRepository userRepository,
     IVehicleRepository vehicleRepository,
     IRepositoryBase<VehicleModel> vehicleModelRepository,
     IRepositoryBase<VehicleBrand> vehicleBrandRepository) : IUserService
 {
     private static readonly string[] StaffCreatableRoles = ["Admin", "Staff"];
+    private static readonly HashSet<string> AllowedCustomerSearchTypes = new(["name", "phone", "id", "vehicle"]);
 
 
     public async Task<PagedResponse<List<UserListItemDto>>> GetPagedAsync(
@@ -93,6 +95,59 @@ public class UserService(
         }
 
         return ApiResponse<UserDetailDto>.SuccessResponse(await MapUserDetailAsync(user), "User retrieved successfully.");
+    }
+
+
+    public async Task<PagedResponse<List<CustomerSearchItemDto>>> SearchCustomersAsync(CustomerSearchQueryDto dto)
+    {
+        // Service-level guardrails provide consistent API failures before repository execution.
+        if (string.IsNullOrWhiteSpace(dto.Query))
+        {
+            return CustomerSearchFailure("Query is required.", "query");
+        }
+
+        var searchType = dto.Type.Trim().ToLowerInvariant();
+        if (!AllowedCustomerSearchTypes.Contains(searchType))
+        {
+            return CustomerSearchFailure("Type must be one of: name, phone, id, vehicle.", "type");
+        }
+
+        var page = dto.Page < 1 ? 1 : dto.Page;
+        var pageSize = dto.PageSize is < 1 or > 100 ? 10 : dto.PageSize;
+
+        var (customers, totalItems) = await userRepository.SearchCustomersAsync(dto.Query, searchType, page, pageSize);
+
+        // Explicit mapping prevents entity exposure and keeps response payload stable.
+        var data = customers
+            .Select(customer => new CustomerSearchItemDto
+            {
+                UserId = customer.Id,
+                FullName = customer.FullName,
+                Email = customer.Email ?? string.Empty,
+                PhoneNumber = customer.PhoneNumber ?? string.Empty,
+                Vehicles = customer.Vehicles
+                    .OrderBy(v => v.VehicleNumber)
+                    .Select(v => new CustomerSearchVehicleDto
+                    {
+                        VehicleId = v.VehicleId,
+                        VehicleNumber = v.VehicleNumber,
+                        BrandName = v.Model.Brand.BrandName,
+                        ModelName = v.Model.ModelName
+                    })
+                    .ToList()
+            })
+            .ToList();
+
+        return PagedResponse<List<CustomerSearchItemDto>>.SuccessPagedResponse(
+            data,
+            new PaginationMeta
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
+            },
+            "Customers retrieved successfully.");
     }
 
 
@@ -411,6 +466,17 @@ public class UserService(
             {
                 { "identity", result.Errors.Select(e => e.Description).ToList() }
             });
+
+
+    private static PagedResponse<List<CustomerSearchItemDto>> CustomerSearchFailure(string message, string errorKey) =>
+        new()
+        {
+            Success = false,
+            Message = message,
+            Errors = new Dictionary<string, List<string>> { { errorKey, [message] } },
+            Data = new List<CustomerSearchItemDto>(),
+            Pagination = new PaginationMeta()
+        };
 
 
     private static string GenerateTemporaryPassword()
