@@ -137,7 +137,7 @@ public class PartRequestService(IPartRequestRepository partRequestRepository) : 
                 });
         }
 
-        var partRequest = await partRequestRepository.GetById(partRequestId);
+        var partRequest = partRequestRepository.GetById(partRequestId);
         if (partRequest is null)
         {
             return ApiResponse<PartRequestUpdateResponseDto>.FailureResponse("Part request not found.");
