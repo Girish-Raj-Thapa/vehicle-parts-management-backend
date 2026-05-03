@@ -4,10 +4,10 @@ using VehiclePartsManagement.Application.DTOs.Notifications;
 using VehiclePartsManagement.Application.Interfaces.Repositories;
 using VehiclePartsManagement.Application.Interfaces.Services;
 
-namespace VehiclePartsManagement.Infrastructure.Services;
+namespace VehiclePartsManagement.Application.Services;
 
 public class NotificationService(
-    ISaleRepository saleRepository, 
+    ISaleRepository saleRepository,
     IPartRepository partRepository,
     IEmailService emailService) : INotificationService
 {
@@ -57,7 +57,7 @@ public class NotificationService(
     {
         var lowStockParts = await partRepository.GetLowStockPartsAsync();
         var partList = lowStockParts.ToList();
-        
+
         var result = new LowStockNotificationResultDto
         {
             TotalLowStockPartsFound = partList.Count,
@@ -73,12 +73,12 @@ public class NotificationService(
             body.AppendLine("<h3>Low Stock Alert</h3>");
             body.AppendLine("<p>The following parts are below their minimum threshold:</p>");
             body.AppendLine("<ul>");
-            
+
             foreach (var part in partList)
             {
                 body.AppendLine($"<li><strong>{part.PartName}</strong> (SKU: {part.Sku}): <span style='color: red;'>{part.CurrentStock} left</span> (Threshold: {part.LowStockThreshold})</li>");
             }
-            
+
             body.AppendLine("</ul>");
             body.AppendLine("<p>Please restock these items soon.</p>");
             body.AppendLine("</div>");

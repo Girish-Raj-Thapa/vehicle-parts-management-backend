@@ -3,9 +3,9 @@ using MailKit.Security;
 using Microsoft.Extensions.Options;
 using MimeKit;
 using VehiclePartsManagement.Application.Interfaces.Services;
-using VehiclePartsManagement.Infrastructure.Config;
+using VehiclePartsManagement.Application.Config;
 
-namespace VehiclePartsManagement.Infrastructure.Services;
+namespace VehiclePartsManagement.Application.Services;
 
 public class EmailService(IOptions<EmailOptions> emailOptions) : IEmailService
 {
@@ -24,10 +24,10 @@ public class EmailService(IOptions<EmailOptions> emailOptions) : IEmailService
             email.Body = builder.ToMessageBody();
 
             using var smtp = new SmtpClient();
-            
+
             // Connect to the server
             await smtp.ConnectAsync(_options.SmtpServer, _options.SmtpPort, _options.UseSsl ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls);
-            
+
             // Authenticate if username/password are provided
             if (!string.IsNullOrEmpty(_options.Username) && !string.IsNullOrEmpty(_options.Password))
             {

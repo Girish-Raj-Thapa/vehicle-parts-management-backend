@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using VehiclePartsManagement.Application.Common;
+using VehiclePartsManagement.Application.Config;
 using VehiclePartsManagement.Infrastructure;
 using VehiclePartsManagement.Infrastructure.Config;
 using VehiclePartsManagement.Infrastructure.Data;
