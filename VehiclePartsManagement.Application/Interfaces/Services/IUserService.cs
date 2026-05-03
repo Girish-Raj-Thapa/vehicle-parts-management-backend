@@ -22,4 +22,6 @@ public interface IUserService
     Task<ApiResponse<CustomerVehicleRegistrationResponseDto>> CreateCustomerWithVehicleAsync(
         CreateCustomerWithVehicleDto dto,
         string createdByUserId);
+    Task<ApiResponse<CustomerDetailsDto>> GetCustomerDetailsAsync(string customerId);
+    Task<ApiResponse<CustomerHistoryDto>> GetCustomerHistoryAsync(string customerId);
 }

@@ -31,4 +31,9 @@ public interface IVendorRepository : IRepositoryBase<Vendor>
     /// Returns purchase query for a given vendor with optional tracking.
     /// </summary>
     IQueryable<Purchase> GetVendorPurchasesQuery(int vendorId, bool trackChanges = false);
+
+    /// <summary>
+    /// Returns a vendor query filtered by a search term (name, contact, email, phone).
+    /// </summary>
+    IQueryable<Vendor> SearchVendors(IQueryable<Vendor> query, string searchTerm);
 }
