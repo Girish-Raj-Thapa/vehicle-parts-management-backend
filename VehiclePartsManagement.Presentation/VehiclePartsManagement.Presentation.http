@@ -1,6 +1,41 @@
 @VehiclePartsManagement.Presentation_HostAddress = http://localhost:5228
 
+# Set your token and customer ID here to easily test all endpoints below
+@Token = YOUR_JWT_TOKEN_HERE
+@CustomerId = YOUR_CUSTOMER_ID_HERE
+
 GET {{VehiclePartsManagement.Presentation_HostAddress}}/weatherforecast/
 Accept: application/json
+
+###
+
+# 1. Get Customer Details (This also returns the vehicles belonging to the customer!)
+GET {{VehiclePartsManagement.Presentation_HostAddress}}/api/customers/{{CustomerId}}
+Accept: application/json
+Authorization: Bearer {{Token}}
+
+###
+
+# 2. Get Customer History
+GET {{VehiclePartsManagement.Presentation_HostAddress}}/api/customers/{{CustomerId}}/history
+Accept: application/json
+Authorization: Bearer {{Token}}
+
+###
+
+# 3. Register a New Vehicle (Uses the currently logged in user's Token)
+POST {{VehiclePartsManagement.Presentation_HostAddress}}/api/vehicles
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{Token}}
+
+{
+  "brandName": "Honda",
+  "modelName": "Dio",
+  "vehicleNumber": "BA 1 PA 1234",
+  "fuelType": 1,
+  "color": "Black",
+  "currentMileage": 1500
+}
 
 ###

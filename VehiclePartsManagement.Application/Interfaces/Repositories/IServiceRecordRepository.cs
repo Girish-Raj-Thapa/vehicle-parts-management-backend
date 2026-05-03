@@ -4,4 +4,5 @@ namespace VehiclePartsManagement.Application.Interfaces.Repositories;
 
 public interface IServiceRecordRepository : IRepositoryBase<ServiceRecord>
 {
+    Task<List<ServiceRecord>> GetCustomerServiceRecordsAsync(string customerId);
 }
