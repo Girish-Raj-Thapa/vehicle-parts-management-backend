@@ -9,6 +9,7 @@
     <ItemGroup>
       <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.5" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
+      <PackageReference Include="QuestPDF" Version="2024.3.0" />
       <ProjectReference Include="..\VehiclePartsManagement.Domain\VehiclePartsManagement.Domain.csproj" />
     </ItemGroup>
 

@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IPartRequestService, PartRequestService>();
         services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<IReportPdfService, ReportPdfService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
 
