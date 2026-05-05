@@ -11,12 +11,13 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 public class PartsController(IPartService partService) : ControllerBase
 {
     /// <summary>
-    /// Returns all parts with their category name and stock info.
+    /// Returns all parts with optional filtering and pagination.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAll([FromQuery] PartQueryDto query)
     {
-        var result = await partService.GetAllAsync();
+        var result = await partService.GetAllAsync(query);
         return Ok(result);
     }
 
@@ -24,6 +25,7 @@ public class PartsController(IPartService partService) : ControllerBase
     /// Returns a single part by ID with full details.
     /// </summary>
     [HttpGet("{partId:int}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetById(int partId)
     {
         var result = await partService.GetByIdAsync(partId);
@@ -31,23 +33,50 @@ public class PartsController(IPartService partService) : ControllerBase
     }
 
     /// <summary>
-    /// Creates a new part. Only Admin can create parts.
+    /// Returns featured parts.
     /// </summary>
-    [HttpPost]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Create([FromBody] CreatePartDto dto)
+    [HttpGet("featured")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetFeatured()
     {
-        var result = await partService.CreateAsync(dto);
-        return result.Success
-            ? StatusCode(StatusCodes.Status201Created, result)
-            : BadRequest(result);
+        var result = await partService.GetFeaturedAsync();
+        return Ok(result);
     }
 
     /// <summary>
-    /// Updates an existing part. Only Admin can update parts.
+    /// Returns related parts for a given part.
+    /// </summary>
+    [HttpGet("{partId:int}/related")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetRelated(int partId)
+    {
+        var result = await partService.GetRelatedAsync(partId);
+        return result.Success ? Ok(result) : NotFound(result);
+    }
+
+    /// <summary>
+    /// Creates a new part. Admin and Staff can create parts.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreatePartDto dto)
+    {
+        try
+        {
+            var result = await partService.CreateAsync(dto);
+            return result.Success
+                ? StatusCode(StatusCodes.Status201Created, result)
+                : BadRequest(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = "Error: " + ex.Message, inner = ex.InnerException?.Message });
+        }
+    }
+
+    /// <summary>
+    /// Updates an existing part. Admin and Staff can update parts.
     /// </summary>
     [HttpPut("{partId:int}")]
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int partId, [FromBody] UpdatePartDto dto)
     {
         var result = await partService.UpdateAsync(partId, dto);
@@ -55,7 +84,17 @@ public class PartsController(IPartService partService) : ControllerBase
     }
 
     /// <summary>
-    /// Deletes a part. Only Admin can delete parts.
+    /// Deactivates or activates a part. Admin and Staff can do this.
+    /// </summary>
+    [HttpPatch("{partId:int}/deactivate")]
+    public async Task<IActionResult> Deactivate(int partId, [FromBody] PartDeactivateDto dto)
+    {
+        var result = await partService.DeactivateAsync(partId, dto);
+        return result.Success ? Ok(result) : NotFound(result);
+    }
+
+    /// <summary>
+    /// Deletes a part (soft delete). Only Admin can delete parts.
     /// </summary>
     [HttpDelete("{partId:int}")]
     [Authorize(Roles = "Admin")]
