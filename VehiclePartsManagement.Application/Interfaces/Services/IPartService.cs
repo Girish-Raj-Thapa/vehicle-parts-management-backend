@@ -5,9 +5,12 @@ namespace VehiclePartsManagement.Application.Interfaces.Services;
 
 public interface IPartService
 {
-    Task<ApiResponse<List<PartListItemDto>>> GetAllAsync();
+    Task<PagedResponse<List<PartListItemDto>>> GetAllAsync(PartQueryDto query);
     Task<ApiResponse<PartResponseDto>> GetByIdAsync(int partId);
     Task<ApiResponse<PartResponseDto>> CreateAsync(CreatePartDto dto);
     Task<ApiResponse<PartResponseDto>> UpdateAsync(int partId, UpdatePartDto dto);
+    Task<ApiResponse<PartStatusResponseDto>> DeactivateAsync(int partId, PartDeactivateDto dto);
     Task<ApiResponse<bool>> DeleteAsync(int partId);
+    Task<ApiResponse<List<PartFeaturedItemDto>>> GetFeaturedAsync();
+    Task<ApiResponse<List<PartListItemDto>>> GetRelatedAsync(int partId);
 }

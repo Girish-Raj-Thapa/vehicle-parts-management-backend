@@ -11,4 +11,5 @@ public class PartListItemDto
     public bool IsInStock { get; set; }
     public bool IsLowStock { get; set; }
     public bool IsActive { get; set; }
+    public List<string> CompatibleModels { get; set; } = [];
 }
