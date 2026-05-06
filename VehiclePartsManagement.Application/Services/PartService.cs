@@ -136,7 +136,10 @@ public class PartService(IPartRepository partRepository) : IPartService
         if (part is null)
             return ApiResponse<bool>.FailureResponse("Part not found.");
 
-        // Soft delete per spec
+        if (!part.IsActive)
+            return ApiResponse<bool>.FailureResponse("Part is already deleted.");
+
+        // Soft delete per spec: one-way deactivation through DELETE.
         part.IsActive = false;
         partRepository.Update(part);
         await partRepository.SaveChangesAsync();

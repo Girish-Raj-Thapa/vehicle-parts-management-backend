@@ -60,17 +60,10 @@ public class PartsController(IPartService partService) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreatePartDto dto)
     {
-        try
-        {
-            var result = await partService.CreateAsync(dto);
-            return result.Success
-                ? StatusCode(StatusCodes.Status201Created, result)
-                : BadRequest(result);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { success = false, message = "Error: " + ex.Message, inner = ex.InnerException?.Message });
-        }
+        var result = await partService.CreateAsync(dto);
+        return result.Success
+            ? StatusCode(StatusCodes.Status201Created, result)
+            : BadRequest(result);
     }
 
     /// <summary>
@@ -94,7 +87,7 @@ public class PartsController(IPartService partService) : ControllerBase
     }
 
     /// <summary>
-    /// Deletes a part (soft delete). Only Admin can delete parts.
+    /// Soft-deletes a part. Only Admin can perform this one-way deactivation.
     /// </summary>
     [HttpDelete("{partId:int}")]
     [Authorize(Roles = "Admin")]
