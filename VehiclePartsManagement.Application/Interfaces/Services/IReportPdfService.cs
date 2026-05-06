@@ -21,4 +21,14 @@ public interface IReportPdfService
     /// Generates a PDF document for the profit and loss report.
     /// </summary>
     Task<byte[]> GenerateProfitLossReportPdfAsync(ProfitLossReportResponseDto report);
+
+    /// <summary>
+    /// Generates a PDF document for the payment collection report.
+    /// </summary>
+    Task<byte[]> GeneratePaymentCollectionReportPdfAsync(PaymentCollectionReportResponseDto report);
+
+    /// <summary>
+    /// Generates a PDF document for the receivable report.
+    /// </summary>
+    Task<byte[]> GenerateReceivableReportPdfAsync(ReceivableReportResponseDto report);
 }

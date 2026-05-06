@@ -192,6 +192,129 @@ public class ReportPdfService : IReportPdfService
         return Task.FromResult(document.GeneratePdf());
     }
 
+    public Task<byte[]> GeneratePaymentCollectionReportPdfAsync(PaymentCollectionReportResponseDto report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(24);
+                page.DefaultTextStyle(x => x.FontSize(10));
+
+                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
+                page.Content().Element(c =>
+                {
+                    c.Column(column =>
+                    {
+                        column.Spacing(12);
+                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
+                        {
+                            ("Total Collected", FormatMoney(report.TotalCollectedAmount)),
+                            ("Cash Payments", FormatMoney(report.CashPaymentsAmount)),
+                            ("Online Payments", FormatMoney(report.OnlinePaymentsAmount)),
+                            ("Bank Payments", FormatMoney(report.BankPaymentsAmount)),
+                            ("Partial Payments", FormatMoney(report.PartialPaymentsAmount)),
+                            ("Unpaid Balance", FormatMoney(report.UnpaidBalanceAmount))
+                        }));
+
+                        column.Item().Element(t => ComposeTable(
+                            t,
+                            "Payment Method Breakdown",
+                            new[] { "Method", "Amount", "Count" },
+                            report.MethodBreakdown.Select(x => new[]
+                            {
+                                x.PaymentMethod,
+                                FormatMoney(x.Amount),
+                                x.Count.ToString(InvariantCulture)
+                            }).ToList(),
+                            new[] { 2.5f, 2f, 1f },
+                            new[] { false, true, true }));
+
+                        column.Item().Element(t => ComposeTable(
+                            t,
+                            "Period Breakdown",
+                            new[] { "Period", "Collected Amount", "Payments" },
+                            report.Collections.Select(x => new[]
+                            {
+                                x.Period,
+                                FormatMoney(x.CollectedAmount),
+                                x.PaymentCount.ToString(InvariantCulture)
+                            }).ToList(),
+                            new[] { 2f, 2f, 1f },
+                            new[] { false, true, true }));
+                    });
+                });
+                page.Footer().Element(ComposeFooter);
+            });
+        });
+
+        return Task.FromResult(document.GeneratePdf());
+    }
+
+    public Task<byte[]> GenerateReceivableReportPdfAsync(ReceivableReportResponseDto report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(24);
+                page.DefaultTextStyle(x => x.FontSize(10));
+
+                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
+                page.Content().Element(c =>
+                {
+                    c.Column(column =>
+                    {
+                        column.Spacing(12);
+                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
+                        {
+                            ("Total Credit Outstanding", FormatMoney(report.TotalCreditOutstanding)),
+                            ("Overdue Credit Amount", FormatMoney(report.OverdueCreditAmount))
+                        }));
+
+                        column.Item().Element(t => ComposeTable(
+                            t,
+                            "Customer Balances",
+                            new[] { "Customer", "Pending Balance", "Overdue Balance", "Invoices" },
+                            report.CustomerBalances.Select(x => new[]
+                            {
+                                $"{x.CustomerName} ({x.CustomerId})",
+                                FormatMoney(x.PendingBalance),
+                                FormatMoney(x.OverdueBalance),
+                                x.InvoiceCount.ToString(InvariantCulture)
+                            }).ToList(),
+                            new[] { 2.8f, 1.7f, 1.7f, 1f },
+                            new[] { false, true, true, true }));
+
+                        column.Item().Element(t => ComposeTable(
+                            t,
+                            "Overdue Invoices",
+                            new[] { "Invoice No", "Customer", "Due Date", "Balance Due", "Days Overdue" },
+                            report.OverdueInvoices.Select(x => new[]
+                            {
+                                x.InvoiceNo,
+                                x.CustomerName,
+                                FormatDateTime(x.DueDate),
+                                FormatMoney(x.BalanceDue),
+                                x.DaysOverdue.ToString(InvariantCulture)
+                            }).ToList(),
+                            new[] { 1.4f, 2.2f, 1.8f, 1.4f, 1.2f },
+                            new[] { false, false, true, true, true }));
+                    });
+                });
+                page.Footer().Element(ComposeFooter);
+            });
+        });
+
+        return Task.FromResult(document.GeneratePdf());
+    }
+
     private static void ComposeMetaHeader(IContainer container, ReportMetaDto meta)
     {
         container.Column(column =>

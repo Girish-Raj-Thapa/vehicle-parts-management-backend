@@ -73,4 +73,46 @@ public class ReportPdfController(
         var fileName = $"profit-loss-report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.pdf";
         return File(pdfBytes, "application/pdf", fileName);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("admin/payment-collection")]
+    [Produces("application/pdf")]
+    public async Task<IActionResult> GetPaymentCollectionPdf([FromQuery] ReportQueryDto query)
+    {
+        var result = await reportService.GetPaymentCollectionReportAsync(query);
+        if (!result.Success)
+        {
+            return BadRequest(result);
+        }
+
+        if (result.Data is not PaymentCollectionReportResponseDto reportData)
+        {
+            return BadRequest(result);
+        }
+
+        var pdfBytes = await reportPdfService.GeneratePaymentCollectionReportPdfAsync(reportData);
+        var fileName = $"payment-collection-report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.pdf";
+        return File(pdfBytes, "application/pdf", fileName);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("admin/receivables")]
+    [Produces("application/pdf")]
+    public async Task<IActionResult> GetReceivablesPdf([FromQuery] ReportQueryDto query)
+    {
+        var result = await reportService.GetReceivableReportAsync(query);
+        if (!result.Success)
+        {
+            return BadRequest(result);
+        }
+
+        if (result.Data is not ReceivableReportResponseDto reportData)
+        {
+            return BadRequest(result);
+        }
+
+        var pdfBytes = await reportPdfService.GenerateReceivableReportPdfAsync(reportData);
+        var fileName = $"receivables-report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.pdf";
+        return File(pdfBytes, "application/pdf", fileName);
+    }
 }
