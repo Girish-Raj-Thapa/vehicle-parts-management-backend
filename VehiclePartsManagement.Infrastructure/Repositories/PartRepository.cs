@@ -11,6 +11,11 @@ public class PartRepository(AppDbContext context)
     public Task<Part?> GetByIdAsync(int partId) =>
         Context.Parts.FirstOrDefaultAsync(p => p.PartId == partId);
 
+    public Task<List<Part>> GetByIdsAsync(List<int> partIds) =>
+        Context.Parts
+            .Where(p => partIds.Contains(p.PartId))
+            .ToListAsync();
+
     public Task<Part?> GetByIdWithDetailsAsync(int partId) =>
         Context.Parts
             .Include(p => p.Category)
