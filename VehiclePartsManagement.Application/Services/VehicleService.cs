@@ -12,6 +12,10 @@ public class VehicleService(
     IRepositoryBase<VehicleModel> vehicleModelRepository,
     IRepositoryBase<VehicleBrand> vehicleBrandRepository) : IVehicleService
 {
+    // ────────────────────────────────────────────────────────────────
+    // Register
+    // ────────────────────────────────────────────────────────────────
+
     public async Task<ApiResponse<VehicleRegistrationResponseDto>> RegisterAsync(
         VehicleRegistrationDto dto,
         string userId)
@@ -53,6 +57,177 @@ public class VehicleService(
             "Vehicle registered successfully.");
     }
 
+
+    // ────────────────────────────────────────────────────────────────
+    // Paged Vehicle List
+    // ────────────────────────────────────────────────────────────────
+
+    public async Task<PagedResponse<List<VehicleListItemDto>>> GetPagedAsync(
+        VehicleQueryDto query,
+        string? applicationUserId)
+    {
+        var page = query.Page < 1 ? 1 : query.Page;
+        var pageSize = query.PageSize is < 1 or > 100 ? 10 : query.PageSize;
+
+        var scopedUserId = query.Mine ? applicationUserId : null;
+        var (items, totalItems) = await vehicleRepository.GetPagedAsync(page, pageSize, scopedUserId, query.Search);
+
+        var data = items.Select(MapListItem).ToList();
+
+        return PagedResponse<List<VehicleListItemDto>>.SuccessPagedResponse(
+            data,
+            new PaginationMeta
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
+            },
+            "Vehicles retrieved successfully.");
+    }
+
+
+    // ────────────────────────────────────────────────────────────────
+    // Vehicle Detail
+    // ────────────────────────────────────────────────────────────────
+
+    public async Task<ApiResponse<VehicleDetailDto>> GetByIdAsync(
+        int vehicleId,
+        string? applicationUserId)
+    {
+        var vehicle = string.IsNullOrWhiteSpace(applicationUserId)
+            ? await vehicleRepository.GetByIdWithDetailsAsync(vehicleId)
+            : await vehicleRepository.GetByIdForUserAsync(vehicleId, applicationUserId);
+
+        if (vehicle is null)
+        {
+            return ApiResponse<VehicleDetailDto>.FailureResponse("Vehicle not found.");
+        }
+
+        return ApiResponse<VehicleDetailDto>.SuccessResponse(
+            MapDetail(vehicle),
+            "Vehicle retrieved successfully.");
+    }
+
+
+    // ────────────────────────────────────────────────────────────────
+    // Service History
+    // ────────────────────────────────────────────────────────────────
+
+    public async Task<PagedResponse<List<VehicleServiceHistoryDto>>> GetServiceHistoryAsync(
+        int vehicleId,
+        string? applicationUserId,
+        int page,
+        int pageSize)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 10 : pageSize;
+
+        // Verify ownership when scoped to a user
+        if (!string.IsNullOrWhiteSpace(applicationUserId))
+        {
+            var isOwner = await vehicleRepository.IsVehicleOwnedByUserAsync(vehicleId, applicationUserId);
+            if (!isOwner)
+            {
+                return PagedFailure<VehicleServiceHistoryDto>(
+                    "Vehicle not found or access denied.", "vehicleId");
+            }
+        }
+
+        var (items, totalItems) = await vehicleRepository.GetServiceHistoryAsync(vehicleId, page, pageSize);
+
+        var data = items.Select(sr => new VehicleServiceHistoryDto
+        {
+            ServiceRecordId = sr.ServiceRecordId,
+            AppointmentId = sr.ServiceAppointmentId,
+            ServiceDate = sr.ServiceDate,
+            ServiceType = sr.ServiceType,
+            Diagnosis = sr.Diagnosis,
+            WorkDone = sr.WorkDone,
+            MileageAtService = sr.MileageAtService,
+            LaborCharge = sr.LaborCharge,
+            NextServiceDueDate = sr.NextServiceDueDate,
+            ReviewRating = sr.Review?.Rating,
+            ReviewComment = sr.Review?.ReviewComment
+        }).ToList();
+
+        return PagedResponse<List<VehicleServiceHistoryDto>>.SuccessPagedResponse(
+            data,
+            new PaginationMeta
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
+            },
+            "Service history retrieved successfully.");
+    }
+
+
+    // ────────────────────────────────────────────────────────────────
+    // Sale History
+    // ────────────────────────────────────────────────────────────────
+
+    public async Task<PagedResponse<List<VehicleSaleHistoryDto>>> GetSaleHistoryAsync(
+        int vehicleId,
+        string? applicationUserId,
+        int page,
+        int pageSize)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 10 : pageSize;
+
+        // Verify ownership when scoped to a user
+        if (!string.IsNullOrWhiteSpace(applicationUserId))
+        {
+            var isOwner = await vehicleRepository.IsVehicleOwnedByUserAsync(vehicleId, applicationUserId);
+            if (!isOwner)
+            {
+                return PagedFailure<VehicleSaleHistoryDto>(
+                    "Vehicle not found or access denied.", "vehicleId");
+            }
+        }
+
+        var (items, totalItems) = await vehicleRepository.GetSaleHistoryAsync(vehicleId, page, pageSize);
+
+        var data = items.Select(s => new VehicleSaleHistoryDto
+        {
+            SaleId = s.SaleId,
+            SaleInvoiceNo = s.SaleInvoiceNo,
+            SaleDate = s.SaleDate,
+            SaleStatus = s.SaleStatus.ToString(),
+            SubTotal = s.SubTotal,
+            DiscountAmount = s.DiscountAmount,
+            TotalAmount = s.TotalAmount,
+            PaymentStatus = s.PaymentStatus.ToString(),
+            ProcessedBy = s.ProcessedByUser.FullName,
+            Items = s.SaleItems.Select(si => new VehicleSaleItemDto
+            {
+                PartId = si.PartId,
+                PartName = si.Part.PartName,
+                Sku = si.Part.Sku,
+                QuantitySold = si.QuantitySold,
+                UnitPrice = si.UnitPriceAtSale,
+                LineTotal = si.LineTotal
+            }).ToList()
+        }).ToList();
+
+        return PagedResponse<List<VehicleSaleHistoryDto>>.SuccessPagedResponse(
+            data,
+            new PaginationMeta
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
+            },
+            "Sale history retrieved successfully.");
+    }
+
+
+    // ────────────────────────────────────────────────────────────────
+    // Private Helpers
+    // ────────────────────────────────────────────────────────────────
 
     private async Task<(int ModelId, string? ErrorMessage)> ResolveVehicleModelIdAsync(VehicleRegistrationDto dto)
     {
@@ -100,4 +275,65 @@ public class VehicleService(
 
         return (model.VehicleModelId, null);
     }
+
+
+    private static VehicleListItemDto MapListItem(Vehicle vehicle) =>
+        new()
+        {
+            VehicleId = vehicle.VehicleId,
+            OwnerName = vehicle.User.FullName,
+            BrandName = vehicle.Model.Brand.BrandName,
+            ModelName = vehicle.Model.ModelName,
+            VehicleName = $"{vehicle.Model.Brand.BrandName} {vehicle.Model.ModelName}",
+            VehicleNumber = vehicle.VehicleNumber,
+            ManufactureYear = vehicle.ManufactureYear,
+            FuelType = vehicle.FuelType.ToString(),
+            Color = vehicle.Color,
+            CurrentMileage = vehicle.CurrentMileage,
+            PrimaryImagePath = vehicle.VehicleImages
+                .FirstOrDefault(i => i.IsPrimary)?.ImagePath
+                ?? vehicle.VehicleImages.FirstOrDefault()?.ImagePath
+        };
+
+
+    private static VehicleDetailDto MapDetail(Vehicle vehicle) =>
+        new()
+        {
+            VehicleId = vehicle.VehicleId,
+            OwnerName = vehicle.User.FullName,
+            OwnerEmail = vehicle.User.Email ?? string.Empty,
+            OwnerPhone = vehicle.User.PhoneNumber ?? string.Empty,
+            BrandName = vehicle.Model.Brand.BrandName,
+            ModelName = vehicle.Model.ModelName,
+            VehicleName = $"{vehicle.Model.Brand.BrandName} {vehicle.Model.ModelName}",
+            VehicleNumber = vehicle.VehicleNumber,
+            ManufactureYear = vehicle.ManufactureYear,
+            EngineNumber = vehicle.EngineNumber,
+            ChassisNumber = vehicle.ChassisNumber,
+            FuelType = vehicle.FuelType.ToString(),
+            Color = vehicle.Color,
+            CurrentMileage = vehicle.CurrentMileage,
+            VehicleRegisteredAt = vehicle.VehicleRegisteredAt,
+            ImagePaths = vehicle.VehicleImages
+                .OrderBy(i => i.DisplayOrder)
+                .Select(i => i.ImagePath)
+                .ToList(),
+            TotalServiceRecords = vehicle.ServiceRecords.Count,
+            TotalSales = vehicle.Sales.Count,
+            TotalPartRequests = vehicle.PartRequests.Count
+        };
+
+
+    private static PagedResponse<List<T>> PagedFailure<T>(string message, string errorKey) =>
+        new()
+        {
+            Success = false,
+            Message = message,
+            Errors = new Dictionary<string, List<string>>
+            {
+                { errorKey, [message] }
+            },
+            Data = new List<T>(),
+            Pagination = new PaginationMeta()
+        };
 }
