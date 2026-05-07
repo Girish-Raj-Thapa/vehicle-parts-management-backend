@@ -31,4 +31,19 @@ public interface IReportPdfService
     /// Generates a PDF document for the receivable report.
     /// </summary>
     Task<byte[]> GenerateReceivableReportPdfAsync(ReceivableReportResponseDto report);
+
+    /// <summary>
+    /// Generates a PDF document for the daily cash flow report.
+    /// </summary>
+    Task<byte[]> GenerateDailyCashFlowReportPdfAsync(DailyCashFlowReportResponseDto report);
+
+    /// <summary>
+    /// Generates a PDF document for the discount report.
+    /// </summary>
+    Task<byte[]> GenerateDiscountReportPdfAsync(DiscountReportResponseDto report);
+
+    /// <summary>
+    /// Generates a PDF document for the dashboard summary report.
+    /// </summary>
+    Task<byte[]> GenerateDashboardSummaryPdfAsync(DashboardSummaryResponseDto report);
 }

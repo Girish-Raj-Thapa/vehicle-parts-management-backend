@@ -315,6 +315,181 @@ public class ReportPdfService : IReportPdfService
         return Task.FromResult(document.GeneratePdf());
     }
 
+    public Task<byte[]> GenerateDailyCashFlowReportPdfAsync(DailyCashFlowReportResponseDto report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(24);
+                page.DefaultTextStyle(x => x.FontSize(10));
+
+                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
+                page.Content().Element(c =>
+                {
+                    c.Column(column =>
+                    {
+                        column.Spacing(12);
+                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
+                        {
+                            ("Opening Balance", FormatMoney(report.OpeningBalance)),
+                            ("Money Received", FormatMoney(report.MoneyReceived)),
+                            ("Spent on Purchases", FormatMoney(report.MoneySpentOnPurchases)),
+                            ("Closing Balance", FormatMoney(report.ClosingBalance))
+                        }));
+
+                        column.Item().Element(t => ComposeTable(
+                            t,
+                            "Payment Method Breakdown",
+                            new[] { "Method", "Amount", "Count" },
+                            report.PaymentMethodBreakdown.Select(x => new[]
+                            {
+                                x.PaymentMethod,
+                                FormatMoney(x.Amount),
+                                x.Count.ToString(InvariantCulture)
+                            }).ToList(),
+                            new[] { 2.5f, 2f, 1f },
+                            new[] { false, true, true }));
+
+                        column.Item().Element(t => ComposeTable(
+                            t,
+                            "Daily Flows",
+                            new[] { "Date (UTC)", "Received", "Spent", "Net Flow" },
+                            report.DailyFlows.Select(x => new[]
+                            {
+                                FormatDateTime(x.DateUtc),
+                                FormatMoney(x.Received),
+                                FormatMoney(x.Spent),
+                                FormatMoney(x.NetFlow)
+                            }).ToList(),
+                            new[] { 2f, 1.6f, 1.6f, 1.6f },
+                            new[] { false, true, true, true }));
+                    });
+                });
+                page.Footer().Element(ComposeFooter);
+            });
+        });
+
+        return Task.FromResult(document.GeneratePdf());
+    }
+
+    public Task<byte[]> GenerateDiscountReportPdfAsync(DiscountReportResponseDto report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(24);
+                page.DefaultTextStyle(x => x.FontSize(10));
+
+                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
+                page.Content().Element(c =>
+                {
+                    c.Column(column =>
+                    {
+                        column.Spacing(12);
+                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
+                        {
+                            ("Total Discount Given", FormatMoney(report.TotalDiscountGiven)),
+                            ("Discounted Invoice Count", report.DiscountedInvoiceCount.ToString(InvariantCulture)),
+                            ("Loyalty 10% Invoice Count", report.Loyalty10PercentInvoiceCount.ToString(InvariantCulture)),
+                            ("Impact on Revenue (%)", FormatMoney(report.ImpactOnRevenuePercent))
+                        }));
+
+                        column.Item().Element(t => ComposeTable(
+                            t,
+                            "Customer Discounts",
+                            new[] { "Customer", "Discount Amount", "Invoices" },
+                            report.CustomerDiscounts.Select(x => new[]
+                            {
+                                $"{x.CustomerName} ({x.CustomerId})",
+                                FormatMoney(x.DiscountAmount),
+                                x.InvoiceCount.ToString(InvariantCulture)
+                            }).ToList(),
+                            new[] { 3f, 2f, 1f },
+                            new[] { false, true, true }));
+
+                        column.Item().Element(t => ComposeTable(
+                            t,
+                            "Period Breakdown",
+                            new[] { "Period", "Discount Amount", "Discounted Invoices" },
+                            report.Collections.Select(x => new[]
+                            {
+                                x.Period,
+                                FormatMoney(x.DiscountAmount),
+                                x.DiscountedInvoiceCount.ToString(InvariantCulture)
+                            }).ToList(),
+                            new[] { 2f, 2f, 1.4f },
+                            new[] { false, true, true }));
+                    });
+                });
+                page.Footer().Element(ComposeFooter);
+            });
+        });
+
+        return Task.FromResult(document.GeneratePdf());
+    }
+
+    public Task<byte[]> GenerateDashboardSummaryPdfAsync(DashboardSummaryResponseDto report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(24);
+                page.DefaultTextStyle(x => x.FontSize(10));
+
+                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
+                page.Content().Element(c =>
+                {
+                    c.Column(column =>
+                    {
+                        column.Spacing(12);
+                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
+                        {
+                            ("Today Sales", FormatMoney(report.TodaySales)),
+                            ("Month Sales", FormatMoney(report.MonthSales)),
+                            ("Month Purchases", FormatMoney(report.MonthPurchases)),
+                            ("Month Payments Received", FormatMoney(report.MonthPaymentsReceived)),
+                            ("Pending Credit Amount", FormatMoney(report.PendingCreditAmount)),
+                            ("Estimated Month Profit", FormatMoney(report.EstimatedMonthProfit))
+                        }));
+
+                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
+                        {
+                            ("Low Stock At-Risk Parts", report.LowStockFinancialRisk.AtRiskPartCount.ToString(InvariantCulture)),
+                            ("Estimated Low Stock Risk Value", FormatMoney(report.LowStockFinancialRisk.EstimatedRiskValue))
+                        }));
+
+                        column.Item().Element(t => ComposeTable(
+                            t,
+                            "Top Pending Receivables",
+                            new[] { "Customer", "Balance Due" },
+                            report.TopPendingReceivables.Select(x => new[]
+                            {
+                                $"{x.CustomerName} ({x.CustomerId})",
+                                FormatMoney(x.BalanceDue)
+                            }).ToList(),
+                            new[] { 3f, 2f },
+                            new[] { false, true }));
+                    });
+                });
+                page.Footer().Element(ComposeFooter);
+            });
+        });
+
+        return Task.FromResult(document.GeneratePdf());
+    }
+
     private static void ComposeMetaHeader(IContainer container, ReportMetaDto meta)
     {
         container.Column(column =>

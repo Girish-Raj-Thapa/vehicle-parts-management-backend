@@ -115,4 +115,67 @@ public class ReportPdfController(
         var fileName = $"receivables-report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.pdf";
         return File(pdfBytes, "application/pdf", fileName);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("admin/daily-cash-flow")]
+    [Produces("application/pdf")]
+    public async Task<IActionResult> GetDailyCashFlowPdf([FromQuery] ReportQueryDto query)
+    {
+        var result = await reportService.GetDailyCashFlowReportAsync(query);
+        if (!result.Success)
+        {
+            return BadRequest(result);
+        }
+
+        if (result.Data is not DailyCashFlowReportResponseDto reportData)
+        {
+            return BadRequest(result);
+        }
+
+        var pdfBytes = await reportPdfService.GenerateDailyCashFlowReportPdfAsync(reportData);
+        var fileName = $"daily-cash-flow-report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.pdf";
+        return File(pdfBytes, "application/pdf", fileName);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("admin/discounts")]
+    [Produces("application/pdf")]
+    public async Task<IActionResult> GetDiscountsPdf([FromQuery] ReportQueryDto query)
+    {
+        var result = await reportService.GetDiscountReportAsync(query);
+        if (!result.Success)
+        {
+            return BadRequest(result);
+        }
+
+        if (result.Data is not DiscountReportResponseDto reportData)
+        {
+            return BadRequest(result);
+        }
+
+        var pdfBytes = await reportPdfService.GenerateDiscountReportPdfAsync(reportData);
+        var fileName = $"discount-report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.pdf";
+        return File(pdfBytes, "application/pdf", fileName);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("admin/summary")]
+    [Produces("application/pdf")]
+    public async Task<IActionResult> GetDashboardSummaryPdf()
+    {
+        var result = await reportService.GetDashboardSummaryAsync();
+        if (!result.Success)
+        {
+            return BadRequest(result);
+        }
+
+        if (result.Data is not DashboardSummaryResponseDto reportData)
+        {
+            return BadRequest(result);
+        }
+
+        var pdfBytes = await reportPdfService.GenerateDashboardSummaryPdfAsync(reportData);
+        var fileName = $"dashboard-summary-report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.pdf";
+        return File(pdfBytes, "application/pdf", fileName);
+    }
 }
