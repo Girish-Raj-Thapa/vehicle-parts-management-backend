@@ -27,6 +27,16 @@ public interface IUserService
     Task<ApiResponse<CustomerServiceRecordDetailDto>> GetMyServiceRecordDetailAsync(
         string customerUserId,
         int serviceRecordId);
+    Task<PagedResponse<List<CustomerPaymentHistoryListItemDto>>> GetMyPaymentHistoryAsync(
+        string customerUserId,
+        int page,
+        int pageSize);
+    Task<PagedResponse<List<CustomerAppointmentHistoryListItemDto>>> GetMyAppointmentHistoryAsync(
+        string customerUserId,
+        int page,
+        int pageSize,
+        string? status);
+    Task<ApiResponse<CustomerHistorySummaryDto>> GetMyHistorySummaryAsync(string customerUserId);
     Task<ApiResponse<UserDetailDto>> GetByIdAsync(string userId);
     Task<ApiResponse<UserDetailDto>> CreateStaffAsync(CreateStaffDto dto);
     Task<ApiResponse<UserIdResponseDto>> UpdateAsync(string userId, UpdateUserDto dto);

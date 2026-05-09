@@ -96,6 +96,56 @@ public class CustomersController(IUserService userService) : ControllerBase
     }
 
 
+    [HttpGet("me/payments")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyPayments(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await userService.GetMyPaymentHistoryAsync(userId, page, pageSize);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+
+    [HttpGet("me/appointments")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyAppointments(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? status = null)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await userService.GetMyAppointmentHistoryAsync(userId, page, pageSize, status);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+
+    [HttpGet("me/history-summary")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyHistorySummary()
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await userService.GetMyHistorySummaryAsync(userId);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+
     private string? GetCurrentUserId() =>
         User.FindFirstValue(JwtRegisteredClaimNames.Sub)
         ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
