@@ -74,4 +74,30 @@ public class SaleRepository(AppDbContext context)
                 s.CustomerApplicationUserId == customerUserId &&
                 s.SaleStatus != SaleStatus.Draft &&
                 s.SaleStatus != SaleStatus.Cancelled);
+    public async Task<Sale?> GetSaleWithDetailsAsync(int saleId)
+    {
+        return await Context.Sales
+            .Include(s => s.CustomerUser)
+            .Include(s => s.SaleItems)
+                .ThenInclude(si => si.Part)
+            .Include(s => s.Payments)
+            .FirstOrDefaultAsync(s => s.SaleId == saleId);
+    }
+
+    public async Task<IEnumerable<Sale>> GetOverdueSalesAsync()
+    {
+        var today = DateTime.UtcNow.Date;
+        return await Context.Sales
+            .Include(s => s.CustomerUser)
+            .Where(s => s.BalanceDue > 0 && s.DueDate < today)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Sale>> GetAllSalesAsync()
+    {
+        return await Context.Sales
+            .Include(s => s.CustomerUser)
+            .OrderByDescending(s => s.SaleDate)
+            .ToListAsync();
+    }
 }

@@ -14,4 +14,7 @@ public interface ISaleRepository : IRepositoryBase<Sale>
         DateTime? toDate);
 
     Task<Sale?> GetCustomerPurchaseDetailAsync(string customerUserId, int saleId);
+    Task<Sale?> GetSaleWithDetailsAsync(int saleId);
+    Task<IEnumerable<Sale>> GetOverdueSalesAsync();
+    Task<IEnumerable<Sale>> GetAllSalesAsync();
 }
