@@ -2,6 +2,9 @@ using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Application.DTOs.Sales;
 using VehiclePartsManagement.Application.DTOs.Sale;
 
+using VehiclePartsManagement.Application.Common;
+using VehiclePartsManagement.Application.DTOs.Sale;
+
 namespace VehiclePartsManagement.Application.Interfaces.Services;
 
 public interface ISaleService
@@ -12,4 +15,5 @@ public interface ISaleService
     Task<PagedResponse<List<SaleListItemDto>>> GetPagedAsync(SaleListQueryDto query, string? customerScopeUserId);
     Task<ApiResponse<SaleDetailDto>> GetByIdAsync(int saleId, string? customerScopeUserId);
     Task<ApiResponse<SaleInvoiceDto>> GetInvoiceAsync(int saleId, string? customerScopeUserId);
+    Task<ApiResponse<SaleResponseDto>> CreateAsync(CreateSaleDto dto, string processedByUserId);
 }

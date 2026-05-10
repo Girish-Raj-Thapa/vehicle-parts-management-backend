@@ -941,4 +941,39 @@ public class UserService(
 
         return ApiResponse<CustomerHistoryDto>.SuccessResponse(dto, "Customer history retrieved successfully.");
     }
+
+    public async Task<ApiResponse<CustomerLoyaltyDto>> GetCustomerLoyaltyAsync(string customerId)
+    {
+        var user = await userManager.FindByIdAsync(customerId);
+        if (user is null)
+            return ApiResponse<CustomerLoyaltyDto>.FailureResponse("Customer not found.");
+
+        var (totalSalesCount, totalAmountSpent) = await userRepository.GetCustomerSalesSummaryAsync(customerId);
+
+        string tier = "Bronze";
+        decimal discount = 0;
+
+        if (totalAmountSpent >= 150000 || totalSalesCount >= 10)
+        {
+            tier = "Gold";
+            discount = 10;
+        }
+        else if (totalAmountSpent >= 50000 || totalSalesCount >= 5)
+        {
+            tier = "Silver";
+            discount = 5;
+        }
+
+        var dto = new CustomerLoyaltyDto
+        {
+            UserId = user.Id,
+            FullName = user.FullName,
+            TotalSalesCount = totalSalesCount,
+            TotalAmountSpent = totalAmountSpent,
+            LoyaltyTier = tier,
+            EligibleDiscountPercent = discount
+        };
+
+        return ApiResponse<CustomerLoyaltyDto>.SuccessResponse(dto, "Customer loyalty retrieved successfully.");
+    }
 }

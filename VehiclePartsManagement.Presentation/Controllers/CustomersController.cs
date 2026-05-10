@@ -168,4 +168,13 @@ public class CustomersController(IUserService userService) : ControllerBase
     private string? GetCurrentUserId() =>
         User.FindFirstValue(JwtRegisteredClaimNames.Sub)
         ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    [HttpGet("{id}/loyalty")]
+    public async Task<IActionResult> GetLoyalty(string id)
+    {
+        var result = await userService.GetCustomerLoyaltyAsync(id);
+        return result.Success
+            ? Ok(result)
+            : NotFound(ApiResponse<CustomerLoyaltyDto>.FailureResponse(result.Message, result.Errors));
+    }
 }

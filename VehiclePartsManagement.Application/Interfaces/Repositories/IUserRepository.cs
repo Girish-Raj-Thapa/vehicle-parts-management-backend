@@ -14,4 +14,9 @@ public interface IUserRepository : IRepositoryBase<ApplicationUser>
         string type,
         int page,
         int pageSize);
+
+    /// <summary>
+    /// Retrieves total sales count and total amount spent by a customer for loyalty calculation.
+    /// </summary>
+    Task<(int TotalSalesCount, decimal TotalAmountSpent)> GetCustomerSalesSummaryAsync(string customerId);
 }

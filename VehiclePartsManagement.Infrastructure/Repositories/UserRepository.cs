@@ -139,4 +139,16 @@ public class UserRepository(AppDbContext context)
                 EF.Functions.ILike(v.VehicleNumber, pattern) ||
                 EF.Functions.ILike(v.Model.ModelName, pattern) ||
                 EF.Functions.ILike(v.Model.Brand.BrandName, pattern)));
+
+    public async Task<(int TotalSalesCount, decimal TotalAmountSpent)> GetCustomerSalesSummaryAsync(string customerId)
+    {
+        var query = Context.Sales
+            .AsNoTracking()
+            .Where(s => s.CustomerApplicationUserId == customerId && s.SaleStatus != VehiclePartsManagement.Domain.Enums.SaleStatus.Cancelled);
+
+        var totalCount = await query.CountAsync();
+        var totalAmount = await query.SumAsync(s => (decimal?)s.TotalAmount) ?? 0m;
+
+        return (totalCount, Math.Round(totalAmount, 2, MidpointRounding.AwayFromZero));
+    }
 }
