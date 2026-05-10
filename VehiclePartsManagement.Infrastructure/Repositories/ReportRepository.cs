@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using VehiclePartsManagement.Application.DTOs.Reports;
+using VehiclePartsManagement.Application.DTOs.Report;
 using VehiclePartsManagement.Application.Interfaces.Repositories;
 using VehiclePartsManagement.Domain.Entities;
 using VehiclePartsManagement.Domain.Enums;
@@ -99,6 +99,9 @@ public class ReportRepository(AppDbContext context) : IReportRepository
         return await Context.Parts
             .AsNoTracking()
             .Where(p => p.IsActive && p.CurrentStock <= p.LowStockThreshold)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<RegularCustomerReportDto>> GetRegularCustomersAsync()
     {
         return await Context.Sales

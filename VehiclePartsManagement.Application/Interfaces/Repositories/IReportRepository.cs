@@ -1,5 +1,5 @@
 using VehiclePartsManagement.Domain.Entities;
-using VehiclePartsManagement.Application.DTOs.Reports;
+using VehiclePartsManagement.Application.DTOs.Report;
 
 namespace VehiclePartsManagement.Application.Interfaces.Repositories;
 

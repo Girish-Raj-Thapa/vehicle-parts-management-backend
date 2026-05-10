@@ -79,6 +79,8 @@ public class ReportsController(
     {
         var result = await reportService.GetDashboardSummaryAsync();
         return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("customers/regulars")]
     public async Task<IActionResult> GetRegularCustomers()
     {
