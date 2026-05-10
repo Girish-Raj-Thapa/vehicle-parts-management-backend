@@ -24,4 +24,5 @@ public interface IUserService
         string createdByUserId);
     Task<ApiResponse<CustomerDetailsDto>> GetCustomerDetailsAsync(string customerId);
     Task<ApiResponse<CustomerHistoryDto>> GetCustomerHistoryAsync(string customerId);
+    Task<ApiResponse<CustomerLoyaltyDto>> GetCustomerLoyaltyAsync(string customerId);
 }

@@ -36,4 +36,13 @@ public class CustomersController(IUserService userService) : ControllerBase
         var result = await userService.SearchCustomersAsync(dto);
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpGet("{id}/loyalty")]
+    public async Task<IActionResult> GetLoyalty(string id)
+    {
+        var result = await userService.GetCustomerLoyaltyAsync(id);
+        return result.Success
+            ? Ok(result)
+            : NotFound(ApiResponse<CustomerLoyaltyDto>.FailureResponse(result.Message, result.Errors));
+    }
 }
