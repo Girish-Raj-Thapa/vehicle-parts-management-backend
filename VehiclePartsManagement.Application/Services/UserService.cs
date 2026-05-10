@@ -15,6 +15,7 @@ public class UserService(
     UserManager<ApplicationUser> userManager,
     RoleManager<IdentityRole> roleManager,
     IUserRepository userRepository,
+    IEmailService emailService,
     IVehicleRepository vehicleRepository,
     IRepositoryBase<VehicleModel> vehicleModelRepository,
     IRepositoryBase<VehicleBrand> vehicleBrandRepository,
@@ -435,7 +436,21 @@ public class UserService(
             return IdentityFailure<UserDetailDto>("Staff registration failed.", roleResult);
         }
 
-        return ApiResponse<UserDetailDto>.SuccessResponse(await MapUserDetailAsync(user), "Staff registered successfully.");
+        var message = "Staff registered successfully.";
+        try
+        {
+            await emailService.SendStaffRegistrationEmailAsync(
+                dto.Email,
+                dto.FullName,
+                dto.Email,
+                dto.Password);
+        }
+        catch
+        {
+            message = "Staff registered successfully, but email notification could not be sent.";
+        }
+
+        return ApiResponse<UserDetailDto>.SuccessResponse(await MapUserDetailAsync(user), message);
     }
 
 
