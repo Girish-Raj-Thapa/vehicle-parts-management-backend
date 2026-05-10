@@ -68,8 +68,12 @@ public static class DependencyInjection
         services.AddScoped<IServiceRecordService, ServiceRecordService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IPartRequestService, PartRequestService>();
+<<<<<<< HEAD
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IReportPdfService, ReportPdfService>();
+=======
+        services.AddScoped<IReportsService, ReportsService>();
+>>>>>>> 32b7cbf (Refeat: "Changed Reports folder to report")
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
 
@@ -87,7 +91,7 @@ public static class DependencyInjection
         services.AddScoped<IServiceRecordRepository, ServiceRecordRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IPartRequestRepository, PartRequestRepository>();
-        services.AddScoped<IReportRepository, ReportRepository>();
+        services.AddScoped<IReportsRepository, ReportsRepository>();
         services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
 
         AddJwtAuthentication(services, configuration);

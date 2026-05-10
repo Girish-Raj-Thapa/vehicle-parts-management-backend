@@ -3,10 +3,14 @@ using VehiclePartsManagement.Application.DTOs.Report;
 
 namespace VehiclePartsManagement.Application.Interfaces.Services;
 
+<<<<<<< HEAD:VehiclePartsManagement.Application/Interfaces/Services/IReportService.cs
 /// <summary>
 /// Exposes business-level operations for generating financial reports.
 /// </summary>
 public interface IReportService
+=======
+public interface IReportsService
+>>>>>>> 32b7cbf (Refeat: "Changed Reports folder to report"):VehiclePartsManagement.Application/Interfaces/Services/IReportsService.cs
 {
     /// <summary>
     /// Generates the sales revenue report for the requested filter range.

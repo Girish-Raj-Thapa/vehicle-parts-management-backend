@@ -3,10 +3,14 @@ using VehiclePartsManagement.Application.DTOs.Report;
 
 namespace VehiclePartsManagement.Application.Interfaces.Repositories;
 
+<<<<<<< HEAD:VehiclePartsManagement.Application/Interfaces/Repositories/IReportRepository.cs
 /// <summary>
 /// Provides read-only data access queries required for financial reporting.
 /// </summary>
 public interface IReportRepository
+=======
+public interface IReportsRepository
+>>>>>>> 32b7cbf (Refeat: "Changed Reports folder to report"):VehiclePartsManagement.Application/Interfaces/Repositories/IReportsRepository.cs
 {
     /// <summary>
     /// Returns sales records with related details within the date range.

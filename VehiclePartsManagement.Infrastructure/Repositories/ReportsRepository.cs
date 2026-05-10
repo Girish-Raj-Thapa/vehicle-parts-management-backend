@@ -7,7 +7,7 @@ using VehiclePartsManagement.Infrastructure.Data;
 
 namespace VehiclePartsManagement.Infrastructure.Repositories;
 
-public class ReportRepository(AppDbContext context) : IReportRepository
+public class ReportsRepository(AppDbContext context) : IReportsRepository
 {
     protected AppDbContext Context { get; } = context;
 

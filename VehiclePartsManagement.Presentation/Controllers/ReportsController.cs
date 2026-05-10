@@ -7,8 +7,12 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 
 [ApiController]
 [Route("api/reports")]
+<<<<<<< HEAD
 public class ReportsController(
     IReportService reportService) : ControllerBase
+=======
+public class ReportsController(IReportsService reportsService) : ControllerBase
+>>>>>>> 32b7cbf (Refeat: "Changed Reports folder to report")
 {
     [Authorize(Roles = "Admin")]
     [HttpGet("admin/sales-revenue")]
@@ -124,21 +128,21 @@ public class ReportsController(
     [HttpGet("customers/regulars")]
     public async Task<IActionResult> GetRegularCustomers()
     {
-        var response = await reportService.GetRegularCustomersAsync();
+        var response = await reportsService.GetRegularCustomersAsync();
         return Ok(response);
     }
 
     [HttpGet("customers/top-spenders")]
     public async Task<IActionResult> GetTopSpenders()
     {
-        var response = await reportService.GetTopSpendersAsync();
+        var response = await reportsService.GetTopSpendersAsync();
         return Ok(response);
     }
 
     [HttpGet("customers/pending-credits")]
     public async Task<IActionResult> GetPendingCredits()
     {
-        var response = await reportService.GetPendingCreditsAsync();
+        var response = await reportsService.GetPendingCreditsAsync();
         return Ok(response);
     }
 }

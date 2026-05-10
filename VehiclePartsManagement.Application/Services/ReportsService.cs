@@ -6,7 +6,7 @@ using VehiclePartsManagement.Domain.Enums;
 
 namespace VehiclePartsManagement.Application.Services;
 
-public class ReportService(IReportRepository reportRepository) : IReportService
+public class ReportsService(IReportsRepository reportsRepository) : IReportsService
 {
     public async Task<ApiResponse<SalesRevenueReportResponseDto>> GetSalesRevenueReportAsync(ReportQueryDto query)
     {
@@ -1239,19 +1239,19 @@ public class ReportService(IReportRepository reportRepository) : IReportService
         };
     public async Task<ApiResponse<IEnumerable<RegularCustomerReportDto>>> GetRegularCustomersAsync()
     {
-        var data = await reportRepository.GetRegularCustomersAsync();
-        return ApiResponse<IEnumerable<RegularCustomerReportDto>>.SuccessResponse(data, "Regular customers report retrieved successfully");
+        var data = await reportsRepository.GetRegularCustomersAsync();
+        return ApiResponse<IEnumerable<RegularCustomerReportDto>>.SuccessResponse(data, "Regular customers reports retrieved successfully");
     }
 
     public async Task<ApiResponse<IEnumerable<TopSpenderReportDto>>> GetTopSpendersAsync()
     {
-        var data = await reportRepository.GetTopSpendersAsync();
-        return ApiResponse<IEnumerable<TopSpenderReportDto>>.SuccessResponse(data, "Top spenders report retrieved successfully");
+        var data = await reportsRepository.GetTopSpendersAsync();
+        return ApiResponse<IEnumerable<TopSpenderReportDto>>.SuccessResponse(data, "Top spenders reports retrieved successfully");
     }
 
     public async Task<ApiResponse<IEnumerable<PendingCreditReportDto>>> GetPendingCreditsAsync()
     {
-        var data = await reportRepository.GetPendingCreditsAsync();
-        return ApiResponse<IEnumerable<PendingCreditReportDto>>.SuccessResponse(data, "Pending credits report retrieved successfully");
+        var data = await reportsRepository.GetPendingCreditsAsync();
+        return ApiResponse<IEnumerable<PendingCreditReportDto>>.SuccessResponse(data, "Pending credits reports retrieved successfully");
     }
 }
