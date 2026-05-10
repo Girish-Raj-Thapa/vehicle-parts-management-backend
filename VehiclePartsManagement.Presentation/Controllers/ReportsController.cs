@@ -7,7 +7,8 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 
 [ApiController]
 [Route("api/reports")]
-public class ReportsController(IReportService reportService) : ControllerBase
+public class ReportsController(
+    IReportService reportService) : ControllerBase
 {
     [Authorize(Roles = "Admin")]
     [HttpGet("admin/sales-revenue")]
@@ -16,8 +17,8 @@ public class ReportsController(IReportService reportService) : ControllerBase
         var result = await reportService.GetSalesRevenueReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
-    
-    
+
+
     [Authorize(Roles = "Admin")]
     [HttpGet("admin/purchase-expense")]
     public async Task<IActionResult> GetPurchaseExpense([FromQuery] ReportQueryDto query)
