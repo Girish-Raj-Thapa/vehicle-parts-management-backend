@@ -54,4 +54,11 @@ public class ServiceRecordRepository(AppDbContext context)
             .FirstOrDefaultAsync(sr =>
                 sr.ServiceRecordId == serviceRecordId &&
                 sr.Vehicle.ApplicationUserId == customerUserId);
+    public Task<List<ServiceRecord>> GetCustomerServiceRecordsAsync(string customerId) =>
+        Context.ServiceRecords
+            .Include(record => record.Vehicle)
+            .Where(record => record.Vehicle.ApplicationUserId == customerId)
+            .OrderByDescending(record => record.ServiceDate)
+            .AsNoTracking()
+            .ToListAsync();
 }

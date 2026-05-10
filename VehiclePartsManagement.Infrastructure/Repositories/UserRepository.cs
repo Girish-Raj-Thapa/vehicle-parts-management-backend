@@ -8,6 +8,13 @@ namespace VehiclePartsManagement.Infrastructure.Repositories;
 public class UserRepository(AppDbContext context)
     : RepositoryBase<ApplicationUser>(context), IUserRepository
 {
+    public Task<ApplicationUser?> GetCustomerWithVehiclesAsync(string customerId) =>
+        Context.Users
+            .Include(user => user.Vehicles)
+                .ThenInclude(vehicle => vehicle.Model)
+                    .ThenInclude(model => model.Brand)
+            .FirstOrDefaultAsync(user => user.Id == customerId);
+
     private const string CustomerRoleName = "Customer";
     private const string SearchByName = "name";
     private const string SearchByPhone = "phone";

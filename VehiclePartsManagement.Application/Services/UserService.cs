@@ -875,4 +875,55 @@ public class UserService(
         var token = Guid.NewGuid().ToString("N")[..8];
         return $"Temp@{token}a1";
     }
+
+
+    public async Task<ApiResponse<CustomerDetailsDto>> GetCustomerDetailsAsync(string customerId)
+    {
+        var user = await userRepository.GetCustomerWithVehiclesAsync(customerId);
+        if (user is null)
+            return ApiResponse<CustomerDetailsDto>.FailureResponse("Customer not found.");
+
+        var dto = new CustomerDetailsDto
+        {
+            UserId = user.Id,
+            FullName = user.FullName,
+            Email = user.Email ?? string.Empty,
+            PhoneNumber = user.PhoneNumber ?? string.Empty,
+            Address = user.Address,
+            RegisteredAt = user.RegisteredAt,
+            IsActive = user.IsActive,
+            Vehicles = user.Vehicles.Select(v => new CustomerVehicleInfoDto
+            {
+                VehicleId = v.VehicleId,
+                VehicleNumber = v.VehicleNumber,
+                BrandName = v.Model?.Brand?.BrandName ?? string.Empty,
+                ModelName = v.Model?.ModelName ?? string.Empty,
+                FuelType = v.FuelType.ToString(),
+                Color = v.Color,
+                ManufactureYear = v.ManufactureYear,
+                CurrentMileage = v.CurrentMileage
+            }).ToList()
+        };
+
+        return ApiResponse<CustomerDetailsDto>.SuccessResponse(dto, "Customer details retrieved successfully.");
+    }
+
+
+    public async Task<ApiResponse<CustomerHistoryDto>> GetCustomerHistoryAsync(string customerId)
+    {
+        var user = await userManager.FindByIdAsync(customerId);
+        if (user is null)
+            return ApiResponse<CustomerHistoryDto>.FailureResponse("Customer not found.");
+
+        // History can be extended with real sale/service data once those services exist.
+        var dto = new CustomerHistoryDto
+        {
+            UserId = user.Id,
+            FullName = user.FullName,
+            PurchaseHistory = [],
+            ServiceHistory = []
+        };
+
+        return ApiResponse<CustomerHistoryDto>.SuccessResponse(dto, "Customer history retrieved successfully.");
+    }
 }

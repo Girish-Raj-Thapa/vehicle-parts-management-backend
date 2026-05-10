@@ -11,4 +11,5 @@ public interface IServiceRecordRepository : IRepositoryBase<ServiceRecord>
         int? vehicleId);
 
     Task<ServiceRecord?> GetCustomerServiceRecordDetailAsync(string customerUserId, int serviceRecordId);
+    Task<List<ServiceRecord>> GetCustomerServiceRecordsAsync(string customerId);
 }

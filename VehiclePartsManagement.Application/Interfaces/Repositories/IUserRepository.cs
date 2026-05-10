@@ -4,6 +4,8 @@ namespace VehiclePartsManagement.Application.Interfaces.Repositories;
 
 public interface IUserRepository : IRepositoryBase<ApplicationUser>
 {
+    Task<ApplicationUser?> GetCustomerWithVehiclesAsync(string customerId);
+
     /// <summary>
     /// Searches customer-role users by a specific search strategy and returns paged users with total count.
     /// </summary>

@@ -70,4 +70,15 @@ public class VendorRepository(AppDbContext context)
             ? query
             : query.AsNoTracking();
     }
+
+    /// <inheritdoc />
+    public IQueryable<Vendor> SearchVendors(IQueryable<Vendor> query, string searchTerm)
+    {
+        var pattern = $"%{searchTerm}%";
+        return query.Where(v =>
+            EF.Functions.ILike(v.VendorName, pattern) ||
+            EF.Functions.ILike(v.ContactPerson, pattern) ||
+            EF.Functions.ILike(v.VendorEmail, pattern) ||
+            EF.Functions.ILike(v.VendorPhone, pattern));
+    }
 }

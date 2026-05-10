@@ -51,7 +51,8 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IImageStorageService, ImageStorageService>();
-        services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IPartService, PartService>();
+        services.AddScoped<IPartCategoryService, PartCategoryService>();
         services.AddScoped<IVehicleService, VehicleService>();
         services.AddScoped<IPartService, PartService>();
         services.AddScoped<IVendorService, VendorService>();
@@ -70,10 +71,12 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IVehicleRepository, VehicleRepository>();
         services.AddScoped<IPartRepository, PartRepository>();
+        services.AddScoped<IPartCategoryRepository, PartCategoryRepository>();
         services.AddScoped<IVendorRepository, VendorRepository>();
         services.AddScoped<IPurchaseRepository, PurchaseRepository>();
         services.AddScoped<ISaleRepository, SaleRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IStockMovementRepository, StockMovementRepository>();
         services.AddScoped<IServiceAppointmentRepository, ServiceAppointmentRepository>();
         services.AddScoped<IServiceRecordRepository, ServiceRecordRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();

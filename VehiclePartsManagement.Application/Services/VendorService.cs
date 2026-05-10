@@ -23,13 +23,7 @@ public class VendorService(IVendorRepository vendorRepository) : IVendorService
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var term = query.Search.Trim();
-
-            vendorQuery = vendorQuery.Where(v => 
-                EF.Functions.ILike(v.VendorName, $"%{term}%") ||
-                EF.Functions.ILike(v.ContactPerson, $"%{term}%") ||
-                EF.Functions.ILike(v.VendorEmail, $"%{term}%") ||
-                EF.Functions.ILike(v.VendorPhone, $"%{term}%")
-            );
+            vendorQuery = vendorRepository.SearchVendors(vendorQuery, term);
         }
         
         if (query.IsActive.HasValue)
