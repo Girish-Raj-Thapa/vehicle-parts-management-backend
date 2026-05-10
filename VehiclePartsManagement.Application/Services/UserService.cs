@@ -7,6 +7,7 @@ using VehiclePartsManagement.Application.Interfaces;
 using VehiclePartsManagement.Application.Interfaces.Repositories;
 using VehiclePartsManagement.Application.Interfaces.Services;
 using VehiclePartsManagement.Domain.Entities;
+using VehiclePartsManagement.Domain.Enums;
 
 namespace VehiclePartsManagement.Application.Services;
 
@@ -14,9 +15,14 @@ public class UserService(
     UserManager<ApplicationUser> userManager,
     RoleManager<IdentityRole> roleManager,
     IUserRepository userRepository,
+    IEmailService emailService,
     IVehicleRepository vehicleRepository,
     IRepositoryBase<VehicleModel> vehicleModelRepository,
-    IRepositoryBase<VehicleBrand> vehicleBrandRepository) : IUserService
+    IRepositoryBase<VehicleBrand> vehicleBrandRepository,
+    ISaleRepository saleRepository,
+    IServiceRecordRepository serviceRecordRepository,
+    IPaymentRepository paymentRepository,
+    IServiceAppointmentRepository serviceAppointmentRepository) : IUserService
 {
     private static readonly string[] StaffCreatableRoles = ["Admin", "Staff"];
     private static readonly HashSet<string> AllowedCustomerSearchTypes = new(["name", "phone", "id", "vehicle"]);
@@ -151,6 +157,245 @@ public class UserService(
     }
 
 
+    public async Task<PagedResponse<List<CustomerPurchaseHistoryListItemDto>>> GetMyPurchaseHistoryAsync(
+        string customerUserId,
+        int page,
+        int pageSize,
+        string? paymentStatus,
+        DateTime? fromDate,
+        DateTime? toDate)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 10 : pageSize;
+
+        if (fromDate.HasValue && toDate.HasValue && fromDate.Value.Date > toDate.Value.Date)
+        {
+            return PagedListFailure<CustomerPurchaseHistoryListItemDto>(
+                "fromDate cannot be greater than toDate.",
+                "dateRange");
+        }
+
+        PaymentStatus? parsedPaymentStatus = null;
+        if (!string.IsNullOrWhiteSpace(paymentStatus))
+        {
+            if (!Enum.TryParse<PaymentStatus>(paymentStatus, true, out var status))
+            {
+                return PagedListFailure<CustomerPurchaseHistoryListItemDto>(
+                    "Payment status is invalid.",
+                    "paymentStatus");
+            }
+
+            parsedPaymentStatus = status;
+        }
+
+        var (sales, totalItems) = await saleRepository.GetCustomerPurchaseHistoryAsync(
+            customerUserId,
+            page,
+            pageSize,
+            parsedPaymentStatus,
+            fromDate,
+            toDate);
+
+        var data = sales.Select(MapPurchaseListItem).ToList();
+
+        return PagedResponse<List<CustomerPurchaseHistoryListItemDto>>.SuccessPagedResponse(
+            data,
+            new PaginationMeta
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
+            },
+            "Purchase history retrieved successfully.");
+    }
+
+
+    public async Task<ApiResponse<CustomerPurchaseDetailDto>> GetMyPurchaseDetailAsync(
+        string customerUserId,
+        int saleId)
+    {
+        var sale = await saleRepository.GetCustomerPurchaseDetailAsync(customerUserId, saleId);
+        if (sale is null)
+        {
+            return ApiResponse<CustomerPurchaseDetailDto>.FailureResponse("Purchase detail not found.");
+        }
+
+        return ApiResponse<CustomerPurchaseDetailDto>.SuccessResponse(
+            MapPurchaseDetail(sale),
+            "Purchase detail retrieved successfully.");
+    }
+
+
+    public async Task<PagedResponse<List<CustomerServiceRecordListItemDto>>> GetMyServiceRecordsAsync(
+        string customerUserId,
+        int page,
+        int pageSize,
+        int? vehicleId)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 10 : pageSize;
+
+        var (serviceRecords, totalItems) = await serviceRecordRepository.GetCustomerServiceRecordsAsync(
+            customerUserId,
+            page,
+            pageSize,
+            vehicleId);
+
+        var data = serviceRecords.Select(MapServiceRecordListItem).ToList();
+
+        return PagedResponse<List<CustomerServiceRecordListItemDto>>.SuccessPagedResponse(
+            data,
+            new PaginationMeta
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
+            },
+            "Service history retrieved successfully.");
+    }
+
+
+    public async Task<ApiResponse<CustomerServiceRecordDetailDto>> GetMyServiceRecordDetailAsync(
+        string customerUserId,
+        int serviceRecordId)
+    {
+        var serviceRecord = await serviceRecordRepository.GetCustomerServiceRecordDetailAsync(
+            customerUserId,
+            serviceRecordId);
+
+        if (serviceRecord is null)
+        {
+            return ApiResponse<CustomerServiceRecordDetailDto>.FailureResponse("Service record not found.");
+        }
+
+        return ApiResponse<CustomerServiceRecordDetailDto>.SuccessResponse(
+            MapServiceRecordDetail(serviceRecord),
+            "Service record detail retrieved successfully.");
+    }
+
+
+    public async Task<PagedResponse<List<CustomerPaymentHistoryListItemDto>>> GetMyPaymentHistoryAsync(
+        string customerUserId,
+        int page,
+        int pageSize)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 10 : pageSize;
+
+        var (payments, totalItems) = await paymentRepository.GetCustomerPaymentHistoryAsync(
+            customerUserId,
+            page,
+            pageSize);
+
+        var data = payments.Select(MapPaymentListItem).ToList();
+
+        return PagedResponse<List<CustomerPaymentHistoryListItemDto>>.SuccessPagedResponse(
+            data,
+            new PaginationMeta
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
+            },
+            "Payment history retrieved successfully.");
+    }
+
+
+    public async Task<PagedResponse<List<CustomerAppointmentHistoryListItemDto>>> GetMyAppointmentHistoryAsync(
+        string customerUserId,
+        int page,
+        int pageSize,
+        string? status)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 10 : pageSize;
+
+        ServiceAppointmentStatus? parsedStatus = null;
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!Enum.TryParse<ServiceAppointmentStatus>(status, true, out var appointmentStatus))
+            {
+                return PagedListFailure<CustomerAppointmentHistoryListItemDto>(
+                    "Appointment status is invalid.",
+                    "status");
+            }
+
+            parsedStatus = appointmentStatus;
+        }
+
+        var (appointments, totalItems) = await serviceAppointmentRepository.GetPagedAsync(
+            page,
+            pageSize,
+            customerUserId,
+            parsedStatus);
+
+        var data = appointments.Select(MapAppointmentListItem).ToList();
+
+        return PagedResponse<List<CustomerAppointmentHistoryListItemDto>>.SuccessPagedResponse(
+            data,
+            new PaginationMeta
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
+            },
+            "Appointment history retrieved successfully.");
+    }
+
+
+    public async Task<ApiResponse<CustomerHistorySummaryDto>> GetMyHistorySummaryAsync(string customerUserId)
+    {
+        var customerSales = saleRepository.FindByCondition(s =>
+            s.CustomerApplicationUserId == customerUserId &&
+            s.SaleStatus != SaleStatus.Draft &&
+            s.SaleStatus != SaleStatus.Cancelled);
+
+        var totalPurchases = await customerSales.CountAsync();
+        var pendingCredit = await customerSales.SumAsync(s => s.BalanceDue);
+
+        var totalServices = await serviceRecordRepository
+            .FindByCondition(sr => sr.Vehicle.ApplicationUserId == customerUserId)
+            .CountAsync();
+
+        var totalVehicles = await vehicleRepository
+            .FindByCondition(v => v.ApplicationUserId == customerUserId)
+            .CountAsync();
+
+        var totalSpent = await paymentRepository
+            .FindByCondition(p =>
+                p.Sale.CustomerApplicationUserId == customerUserId &&
+                p.Sale.SaleStatus != SaleStatus.Draft &&
+                p.Sale.SaleStatus != SaleStatus.Cancelled)
+            .SumAsync(p => p.PaymentAmount);
+
+        var today = DateTime.UtcNow.Date;
+        var upcomingAppointments = await serviceAppointmentRepository
+            .FindByCondition(sa =>
+                sa.ApplicationUserId == customerUserId &&
+                sa.AppointmentDate.Date >= today &&
+                sa.AppointmentStatus != ServiceAppointmentStatus.Completed &&
+                sa.AppointmentStatus != ServiceAppointmentStatus.Cancelled &&
+                sa.AppointmentStatus != ServiceAppointmentStatus.NoShow)
+            .CountAsync();
+
+        return ApiResponse<CustomerHistorySummaryDto>.SuccessResponse(
+            new CustomerHistorySummaryDto
+            {
+                TotalPurchases = totalPurchases,
+                TotalServices = totalServices,
+                TotalVehicles = totalVehicles,
+                TotalSpent = totalSpent,
+                PendingCredit = pendingCredit,
+                UpcomingAppointments = upcomingAppointments
+            },
+            "History summary retrieved successfully.");
+    }
+
+
     public async Task<ApiResponse<UserDetailDto>> CreateStaffAsync(CreateStaffDto dto)
     {
         var roles = dto.Roles.Count == 0
@@ -191,7 +436,21 @@ public class UserService(
             return IdentityFailure<UserDetailDto>("Staff registration failed.", roleResult);
         }
 
-        return ApiResponse<UserDetailDto>.SuccessResponse(await MapUserDetailAsync(user), "Staff registered successfully.");
+        var message = "Staff registered successfully.";
+        try
+        {
+            await emailService.SendStaffRegistrationEmailAsync(
+                dto.Email,
+                dto.FullName,
+                dto.Email,
+                dto.Password);
+        }
+        catch
+        {
+            message = "Staff registered successfully, but email notification could not be sent.";
+        }
+
+        return ApiResponse<UserDetailDto>.SuccessResponse(await MapUserDetailAsync(user), message);
     }
 
 
@@ -381,6 +640,142 @@ public class UserService(
     }
 
 
+    private static CustomerPurchaseHistoryListItemDto MapPurchaseListItem(Sale sale) =>
+        new()
+        {
+            SaleId = sale.SaleId,
+            SaleInvoiceNo = sale.SaleInvoiceNo,
+            SaleDate = DateOnly.FromDateTime(sale.SaleDate),
+            VehicleId = sale.VehicleId,
+            VehicleNumber = sale.Vehicle.VehicleNumber,
+            VehicleName = GetVehicleName(sale.Vehicle),
+            SaleStatus = sale.SaleStatus.ToString(),
+            TotalAmount = sale.TotalAmount,
+            PaidAmount = sale.Payments.Sum(p => p.PaymentAmount),
+            BalanceDue = sale.BalanceDue,
+            PaymentStatus = sale.PaymentStatus.ToString()
+        };
+
+
+    private static CustomerPurchaseDetailDto MapPurchaseDetail(Sale sale) =>
+        new()
+        {
+            SaleId = sale.SaleId,
+            SaleInvoiceNo = sale.SaleInvoiceNo,
+            SaleDate = DateOnly.FromDateTime(sale.SaleDate),
+            SaleStatus = sale.SaleStatus.ToString(),
+            Vehicle = new CustomerHistoryVehicleDto
+            {
+                VehicleId = sale.VehicleId,
+                VehicleNumber = sale.Vehicle.VehicleNumber,
+                VehicleName = GetVehicleName(sale.Vehicle)
+            },
+            Items = sale.SaleItems
+                .OrderBy(si => si.SaleItemId)
+                .Select(si => new CustomerPurchaseItemDto
+                {
+                    SaleItemId = si.SaleItemId,
+                    PartId = si.PartId,
+                    PartName = si.Part.PartName,
+                    QuantitySold = si.QuantitySold,
+                    UnitPriceAtSale = si.UnitPriceAtSale,
+                    LineTotal = si.LineTotal
+                })
+                .ToList(),
+            SubTotal = sale.SubTotal,
+            LoyaltyDiscountPercent = sale.LoyaltyDiscountPercent,
+            DiscountAmount = sale.DiscountAmount,
+            TotalAmount = sale.TotalAmount,
+            PaidAmount = sale.Payments.Sum(p => p.PaymentAmount),
+            BalanceDue = sale.BalanceDue,
+            PaymentStatus = sale.PaymentStatus.ToString()
+        };
+
+
+    private static CustomerServiceRecordListItemDto MapServiceRecordListItem(ServiceRecord serviceRecord) =>
+        new()
+        {
+            ServiceRecordId = serviceRecord.ServiceRecordId,
+            ServiceAppointmentId = serviceRecord.ServiceAppointmentId,
+            ServiceDate = DateOnly.FromDateTime(serviceRecord.ServiceDate),
+            VehicleId = serviceRecord.VehicleId,
+            VehicleNumber = serviceRecord.Vehicle.VehicleNumber,
+            VehicleName = GetVehicleName(serviceRecord.Vehicle),
+            ServiceType = serviceRecord.ServiceType,
+            Diagnosis = serviceRecord.Diagnosis,
+            WorkDone = serviceRecord.WorkDone,
+            MileageAtService = serviceRecord.MileageAtService,
+            LaborCharge = serviceRecord.LaborCharge,
+            NextServiceDueDate = serviceRecord.NextServiceDueDate.HasValue
+                ? DateOnly.FromDateTime(serviceRecord.NextServiceDueDate.Value)
+                : null
+        };
+
+
+    private static CustomerServiceRecordDetailDto MapServiceRecordDetail(ServiceRecord serviceRecord) =>
+        new()
+        {
+            ServiceRecordId = serviceRecord.ServiceRecordId,
+            ServiceAppointmentId = serviceRecord.ServiceAppointmentId,
+            ServiceDate = DateOnly.FromDateTime(serviceRecord.ServiceDate),
+            Vehicle = new CustomerHistoryVehicleDto
+            {
+                VehicleId = serviceRecord.VehicleId,
+                VehicleNumber = serviceRecord.Vehicle.VehicleNumber,
+                VehicleName = GetVehicleName(serviceRecord.Vehicle)
+            },
+            Appointment = new CustomerServiceAppointmentHistoryDto
+            {
+                AppointmentDate = DateOnly.FromDateTime(serviceRecord.ServiceAppointment.AppointmentDate),
+                AppointmentTime = serviceRecord.ServiceAppointment.AppointmentTime,
+                AppointmentType = serviceRecord.ServiceAppointment.AppointmentType.ToString(),
+                AppointmentStatus = serviceRecord.ServiceAppointment.AppointmentStatus.ToString(),
+                AppointmentNote = serviceRecord.ServiceAppointment.AppointmentNote
+            },
+            ServiceType = serviceRecord.ServiceType,
+            Diagnosis = serviceRecord.Diagnosis,
+            WorkDone = serviceRecord.WorkDone,
+            MileageAtService = serviceRecord.MileageAtService,
+            LaborCharge = serviceRecord.LaborCharge,
+            NextServiceDueDate = serviceRecord.NextServiceDueDate.HasValue
+                ? DateOnly.FromDateTime(serviceRecord.NextServiceDueDate.Value)
+                : null
+        };
+
+
+    private static CustomerPaymentHistoryListItemDto MapPaymentListItem(Payment payment) =>
+        new()
+        {
+            PaymentId = payment.PaymentId,
+            SaleId = payment.SaleId,
+            SaleInvoiceNo = payment.Sale.SaleInvoiceNo,
+            PaymentDate = DateOnly.FromDateTime(payment.PaymentDate),
+            PaymentMethod = payment.PaymentMethod.ToString(),
+            PaymentAmount = payment.PaymentAmount,
+            PaymentReference = payment.PaymentReference,
+            PaymentNote = payment.PaymentNote
+        };
+
+
+    private static CustomerAppointmentHistoryListItemDto MapAppointmentListItem(ServiceAppointment appointment) =>
+        new()
+        {
+            AppointmentId = appointment.ServiceAppointmentId,
+            VehicleId = appointment.VehicleId,
+            VehicleNumber = appointment.Vehicle.VehicleNumber,
+            VehicleName = GetVehicleName(appointment.Vehicle),
+            AppointmentDate = DateOnly.FromDateTime(appointment.AppointmentDate),
+            AppointmentTime = appointment.AppointmentTime,
+            AppointmentType = appointment.AppointmentType.ToString(),
+            AppointmentStatus = appointment.AppointmentStatus.ToString(),
+            AppointmentNote = appointment.AppointmentNote
+        };
+
+
+    private static string GetVehicleName(Vehicle vehicle) =>
+        $"{vehicle.Model.Brand.BrandName} {vehicle.Model.ModelName}";
+
+
     private async Task<string?> ValidateRolesAsync(IEnumerable<string> roles, IReadOnlyCollection<string>? allowedRoles = null)
     {
         foreach (var role in roles)
@@ -479,6 +874,17 @@ public class UserService(
         };
 
 
+    private static PagedResponse<List<T>> PagedListFailure<T>(string message, string errorKey) =>
+        new()
+        {
+            Success = false,
+            Message = message,
+            Errors = new Dictionary<string, List<string>> { { errorKey, [message] } },
+            Data = new List<T>(),
+            Pagination = new PaginationMeta()
+        };
+
+
     private static string GenerateTemporaryPassword()
     {
         var token = Guid.NewGuid().ToString("N")[..8];
@@ -534,5 +940,40 @@ public class UserService(
         };
 
         return ApiResponse<CustomerHistoryDto>.SuccessResponse(dto, "Customer history retrieved successfully.");
+    }
+
+    public async Task<ApiResponse<CustomerLoyaltyDto>> GetCustomerLoyaltyAsync(string customerId)
+    {
+        var user = await userManager.FindByIdAsync(customerId);
+        if (user is null)
+            return ApiResponse<CustomerLoyaltyDto>.FailureResponse("Customer not found.");
+
+        var (totalSalesCount, totalAmountSpent) = await userRepository.GetCustomerSalesSummaryAsync(customerId);
+
+        string tier = "Bronze";
+        decimal discount = 0;
+
+        if (totalAmountSpent >= 150000 || totalSalesCount >= 10)
+        {
+            tier = "Gold";
+            discount = 10;
+        }
+        else if (totalAmountSpent >= 50000 || totalSalesCount >= 5)
+        {
+            tier = "Silver";
+            discount = 5;
+        }
+
+        var dto = new CustomerLoyaltyDto
+        {
+            UserId = user.Id,
+            FullName = user.FullName,
+            TotalSalesCount = totalSalesCount,
+            TotalAmountSpent = totalAmountSpent,
+            LoyaltyTier = tier,
+            EligibleDiscountPercent = discount
+        };
+
+        return ApiResponse<CustomerLoyaltyDto>.SuccessResponse(dto, "Customer loyalty retrieved successfully.");
     }
 }

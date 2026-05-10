@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using VehiclePartsManagement.Application.Config;
 using VehiclePartsManagement.Application.Interfaces;
 using VehiclePartsManagement.Application.Interfaces.Repositories;
 using VehiclePartsManagement.Application.Interfaces.Services;
@@ -13,7 +14,6 @@ using VehiclePartsManagement.Domain.Entities;
 using VehiclePartsManagement.Infrastructure.Config;
 using VehiclePartsManagement.Infrastructure.Data;
 using VehiclePartsManagement.Infrastructure.Repositories;
-using VehiclePartsManagement.Infrastructure.Services;
 
 namespace VehiclePartsManagement.Infrastructure;
 
@@ -40,6 +40,11 @@ public static class DependencyInjection
 
         services.AddOptions<ImageStorageOptions>()
             .Bind(configuration.GetSection(ImageStorageOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<VehiclePartsManagement.Application.Config.EmailOptions>()
+            .Bind(configuration.GetSection(VehiclePartsManagement.Application.Config.EmailOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 

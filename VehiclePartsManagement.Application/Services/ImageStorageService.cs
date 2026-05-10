@@ -4,9 +4,9 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing;
 using VehiclePartsManagement.Application.Interfaces;
-using VehiclePartsManagement.Infrastructure.Config;
+using VehiclePartsManagement.Application.Config;
 
-namespace VehiclePartsManagement.Infrastructure.Services;
+namespace VehiclePartsManagement.Application.Services;
 
 /// <summary>
 /// Handles image validation, optimization, and file-system persistence.

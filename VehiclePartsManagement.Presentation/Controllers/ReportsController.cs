@@ -80,4 +80,25 @@ public class ReportsController(
         var result = await reportService.GetDashboardSummaryAsync();
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpGet("customers/regulars")]
+    public async Task<IActionResult> GetRegularCustomers()
+    {
+        var response = await reportService.GetRegularCustomersAsync();
+        return Ok(response);
+    }
+
+    [HttpGet("customers/top-spenders")]
+    public async Task<IActionResult> GetTopSpenders()
+    {
+        var response = await reportService.GetTopSpendersAsync();
+        return Ok(response);
+    }
+
+    [HttpGet("customers/pending-credits")]
+    public async Task<IActionResult> GetPendingCredits()
+    {
+        var response = await reportService.GetPendingCreditsAsync();
+        return Ok(response);
+    }
 }

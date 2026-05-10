@@ -13,6 +13,19 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 [Authorize]
 public class SalesController(ISaleService saleService) : ControllerBase
 {
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAllSales()
+    {
+        var response = await saleService.GetAllSalesAsync();
+        return Ok(response);
+    }
+
+    [HttpPost("{saleId}/send-email")]
+    public async Task<IActionResult> SendEmail(int saleId)
+    {
+        var response = await saleService.SendInvoiceEmailAsync(saleId);
+        return Ok(response);
+    }
     /// <summary>
     /// Creates a sale invoice and records part sale transaction by staff/admin.
     /// </summary>

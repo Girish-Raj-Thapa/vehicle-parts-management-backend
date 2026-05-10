@@ -5,6 +5,18 @@ namespace VehiclePartsManagement.Application.Interfaces.Repositories;
 
 public interface ISaleRepository : IRepositoryBase<Sale>
 {
+    Task<(List<Sale> Items, int TotalItems)> GetCustomerPurchaseHistoryAsync(
+        string customerUserId,
+        int page,
+        int pageSize,
+        PaymentStatus? paymentStatus,
+        DateTime? fromDate,
+        DateTime? toDate);
+
+    Task<Sale?> GetCustomerPurchaseDetailAsync(string customerUserId, int saleId);
+    Task<Sale?> GetSaleWithDetailsAsync(int saleId);
+    Task<IEnumerable<Sale>> GetOverdueSalesAsync();
+    Task<IEnumerable<Sale>> GetAllSalesAsync();
     /// <summary>
     /// Returns paged sales with optional customer and payment status filters.
     /// </summary>

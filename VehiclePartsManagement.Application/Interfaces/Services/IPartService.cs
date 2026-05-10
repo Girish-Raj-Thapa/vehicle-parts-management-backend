@@ -1,10 +1,12 @@
 using VehiclePartsManagement.Application.Common;
+using VehiclePartsManagement.Application.DTOs.Inventory;
 using VehiclePartsManagement.Application.DTOs.Part;
 
 namespace VehiclePartsManagement.Application.Interfaces.Services;
 
 public interface IPartService
 {
+    Task<ApiResponse<IEnumerable<LowStockPartDto>>> GetLowStockPartsAsync();
     Task<PagedResponse<List<PartListItemDto>>> GetAllAsync(PartQueryDto query);
     Task<ApiResponse<PartResponseDto>> GetByIdAsync(int partId);
     Task<ApiResponse<PartResponseDto>> CreateAsync(CreatePartDto dto);

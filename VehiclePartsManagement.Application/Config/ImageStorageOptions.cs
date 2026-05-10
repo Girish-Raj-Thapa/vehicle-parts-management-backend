@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace VehiclePartsManagement.Infrastructure.Config;
+namespace VehiclePartsManagement.Application.Config;
 
 /// <summary>
 /// Strongly typed image storage settings.

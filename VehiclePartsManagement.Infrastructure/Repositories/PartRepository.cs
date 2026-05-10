@@ -8,6 +8,13 @@ namespace VehiclePartsManagement.Infrastructure.Repositories;
 public class PartRepository(AppDbContext context)
     : RepositoryBase<Part>(context), IPartRepository
 {
+    public async Task<IEnumerable<Part>> GetLowStockPartsAsync()
+    {
+        return await Context.Parts
+            .Include(p => p.Category)
+            .Where(p => p.CurrentStock <= p.LowStockThreshold)
+            .ToListAsync();
+    }
     public Task<Part?> GetByIdAsync(int partId) =>
         Context.Parts.FirstOrDefaultAsync(p => p.PartId == partId);
 

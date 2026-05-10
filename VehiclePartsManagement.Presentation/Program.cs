@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using VehiclePartsManagement.Application.Common;
+using VehiclePartsManagement.Application.Config;
 using VehiclePartsManagement.Infrastructure;
 using VehiclePartsManagement.Infrastructure.Config;
 using VehiclePartsManagement.Infrastructure.Data;
@@ -73,6 +74,8 @@ using (var scope = app.Services.CreateScope())
     await dbContext.Database.MigrateAsync();
 
     await IdentitySeeder.SeedAsync(scope.ServiceProvider);
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await DataSeeder.SeedAsync(context);
 }
 
 app.UseMiddleware<ExceptionHandler>();
@@ -90,10 +93,13 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseHttpsRedirection();
 
 app.UseCors("FrontendDev");
+app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapGet("/test", () => "Server is running!");
 
 app.Run();
