@@ -1,9 +1,6 @@
 using VehiclePartsManagement.Application.Common;
-<<<<<<< HEAD
 using VehiclePartsManagement.Application.DTOs.Inventory;
-=======
 using VehiclePartsManagement.Application.DTOs.Part;
->>>>>>> prashish
 
 namespace VehiclePartsManagement.Application.Interfaces.Services;
 

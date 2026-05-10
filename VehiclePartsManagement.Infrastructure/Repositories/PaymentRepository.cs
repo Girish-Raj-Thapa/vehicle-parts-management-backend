@@ -36,6 +36,8 @@ public class PaymentRepository(AppDbContext context)
             .ToListAsync();
 
         return (items, totalItems);
+    }
+
     /// <summary>
     /// Retrieves sale payments ordered by newest entry first.
     /// </summary>

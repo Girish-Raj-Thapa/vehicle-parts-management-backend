@@ -1,11 +1,7 @@
-<<<<<<< HEAD
 using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Application.DTOs.Inventory;
-=======
 using Microsoft.EntityFrameworkCore;
-using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Application.DTOs.Part;
->>>>>>> prashish
 using VehiclePartsManagement.Application.Interfaces.Repositories;
 using VehiclePartsManagement.Application.Interfaces.Services;
 using VehiclePartsManagement.Domain.Entities;

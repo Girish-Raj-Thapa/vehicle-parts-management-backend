@@ -54,4 +54,28 @@ public class EmailService(IOptions<EmailOptions> emailOptions) : IEmailService
             return false;
         }
     }
+
+    public async Task SendStaffRegistrationEmailAsync(
+        string toEmail,
+        string fullName,
+        string username,
+        string password)
+    {
+        var body = $"""
+            <p>Hello {fullName},</p>
+            <p>Your staff account has been registered successfully.</p>
+            <p>
+                <strong>Username:</strong> {username}<br />
+                <strong>Password:</strong> {password}
+            </p>
+            <p>Please log in and change your password if the application provides that option.</p>
+            <p>Regards,<br />Vehicle Parts Management</p>
+            """;
+
+        var sent = await SendEmailAsync(toEmail, "Your staff account has been registered", body);
+        if (!sent)
+        {
+            throw new InvalidOperationException("Failed to send staff registration email.");
+        }
+    }
 }

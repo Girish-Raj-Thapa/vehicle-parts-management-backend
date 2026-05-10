@@ -27,33 +27,7 @@ public class SaleRepository(AppDbContext context)
                 s.CustomerApplicationUserId == customerUserId &&
                 s.SaleStatus != SaleStatus.Draft &&
                 s.SaleStatus != SaleStatus.Cancelled);
-    /// <summary>
-    /// Retrieves sales with optional customer and payment-status filtering and pagination.
-    /// </summary>
-    public async Task<(List<Sale> Items, int TotalItems)> GetPagedAsync(
-        int page,
-        int pageSize,
-        string? customerApplicationUserId,
-        PaymentStatus? paymentStatus)
-    {
-        var query = Context.Sales
-            .AsNoTracking()
-            .Include(s => s.CustomerUser)
-            .Include(s => s.Vehicle)
-            .Include(s => s.Payments)
-            .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(customerApplicationUserId))
-        {
-            query = query.Where(s => s.CustomerApplicationUserId == customerApplicationUserId);
-        }
-
-        if (paymentStatus.HasValue)
-        {
-            query = query.Where(s => s.PaymentStatus == paymentStatus.Value);
-        }
-
-<<<<<<< HEAD
         if (fromDate.HasValue)
         {
             query = query.Where(s => s.SaleDate.Date >= fromDate.Value.Date);
@@ -63,10 +37,6 @@ public class SaleRepository(AppDbContext context)
         {
             query = query.Where(s => s.SaleDate.Date <= toDate.Value.Date);
         }
-
-=======
-        // Count query is executed separately for pagination metadata.
->>>>>>> prashish
         var totalItems = await query.CountAsync();
         if (totalItems == 0)
         {
@@ -83,8 +53,6 @@ public class SaleRepository(AppDbContext context)
         return (items, totalItems);
     }
 
-
-<<<<<<< HEAD
     public Task<Sale?> GetCustomerPurchaseDetailAsync(string customerUserId, int saleId) =>
         Context.Sales
             .AsNoTracking()
@@ -99,6 +67,7 @@ public class SaleRepository(AppDbContext context)
                 s.CustomerApplicationUserId == customerUserId &&
                 s.SaleStatus != SaleStatus.Draft &&
                 s.SaleStatus != SaleStatus.Cancelled);
+
     public async Task<Sale?> GetSaleWithDetailsAsync(int saleId)
     {
         return await Context.Sales
@@ -125,9 +94,51 @@ public class SaleRepository(AppDbContext context)
             .OrderByDescending(s => s.SaleDate)
             .ToListAsync();
     }
-=======
+
     /// <summary>
-    /// Retrieves a single sale with related customer, vehicle, items, part, and payment data.
+    /// Retrieves sales with optional customer and payment-status filtering and pagination.
+    /// </summary>
+    public async Task<(List<Sale> Items, int TotalItems)> GetPagedAsync(
+        int page,
+        int pageSize,
+        string? customerApplicationUserId,
+        PaymentStatus? paymentStatus)
+    {
+        var query = Context.Sales
+            .AsNoTracking()
+            .Include(s => s.CustomerUser)
+            .Include(s => s.Vehicle)
+            .Include(s => s.Payments)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(customerApplicationUserId))
+        {
+            query = query.Where(s => s.CustomerApplicationUserId == customerApplicationUserId);
+        }
+
+        if (paymentStatus.HasValue)
+        {
+            query = query.Where(s => s.PaymentStatus == paymentStatus.Value);
+        }
+
+        var totalItems = await query.CountAsync();
+        if (totalItems == 0)
+        {
+            return ([], 0);
+        }
+
+        var items = await query
+            .OrderByDescending(s => s.SaleDate)
+            .ThenByDescending(s => s.SaleId)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (items, totalItems);
+    }
+
+    /// <summary>
+    /// Returns one sale with full detail used by sales detail and invoice views.
     /// </summary>
     public Task<Sale?> GetByIdWithDetailsAsync(int saleId) =>
         Context.Sales
@@ -143,7 +154,7 @@ public class SaleRepository(AppDbContext context)
 
 
     /// <summary>
-    /// Retrieves a single sale with full detail constrained to one customer scope.
+    /// Returns one sale with full detail constrained to a specific customer scope.
     /// </summary>
     public Task<Sale?> GetByIdForCustomerAsync(int saleId, string customerApplicationUserId) =>
         Context.Sales
@@ -158,5 +169,4 @@ public class SaleRepository(AppDbContext context)
             .FirstOrDefaultAsync(s =>
                 s.SaleId == saleId &&
                 s.CustomerApplicationUserId == customerApplicationUserId);
->>>>>>> prashish
 }

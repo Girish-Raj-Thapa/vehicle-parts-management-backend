@@ -1,12 +1,8 @@
-<<<<<<< HEAD
 using System.Text;
-using VehiclePartsManagement.Application.Common;
-using VehiclePartsManagement.Application.DTOs.Sales;
-=======
 using Microsoft.AspNetCore.Identity;
 using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Application.DTOs.Sale;
->>>>>>> prashish
+using VehiclePartsManagement.Application.DTOs.Sales;
 using VehiclePartsManagement.Application.Interfaces.Repositories;
 using VehiclePartsManagement.Application.Interfaces.Services;
 using VehiclePartsManagement.Domain.Entities;
@@ -14,7 +10,14 @@ using VehiclePartsManagement.Domain.Enums;
 
 namespace VehiclePartsManagement.Application.Services;
 
-public class SaleService(ISaleRepository saleRepository, IEmailService emailService) : ISaleService
+public class SaleService(
+    ISaleRepository saleRepository,
+    IEmailService emailService,
+    IPaymentRepository paymentRepository,
+    IPartRepository partRepository,
+    IVehicleRepository vehicleRepository,
+    IStockMovementRepository stockMovementRepository,
+    UserManager<ApplicationUser> userManager) : ISaleService
 {
     public async Task<ApiResponse<IEnumerable<SaleSummaryDto>>> GetAllSalesAsync()
     {
@@ -101,18 +104,6 @@ public class SaleService(ISaleRepository saleRepository, IEmailService emailServ
 
         return sb.ToString();
     }
-/// <summary>
-/// Handles sales creation and sales read workflows, including pricing, payment state,
-/// inventory movement, and DTO mapping for API responses.
-/// </summary>
-public class SaleService(
-    ISaleRepository saleRepository,
-    IPaymentRepository paymentRepository,
-    IPartRepository partRepository,
-    IVehicleRepository vehicleRepository,
-    IStockMovementRepository stockMovementRepository,
-    UserManager<ApplicationUser> userManager) : ISaleService
-{
     private const decimal LoyaltyDiscountPercent = 10m;
     private const decimal LoyaltyThresholdAmount = 5000m;
 
