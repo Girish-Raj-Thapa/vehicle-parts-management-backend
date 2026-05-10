@@ -1,6 +1,5 @@
 using VehiclePartsManagement.Domain.Enums;
 using VehiclePartsManagement.Domain.Entities;
-using VehiclePartsManagement.Domain.Enums;
 
 namespace VehiclePartsManagement.Application.Interfaces.Repositories;
 
