@@ -14,6 +14,11 @@ public class ReportsController(
     [HttpGet("admin/sales-revenue")]
     public async Task<IActionResult> GetSalesRevenue([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetSalesRevenueReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }

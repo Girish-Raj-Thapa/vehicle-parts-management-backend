@@ -10,17 +10,20 @@ public class ReportService(IReportRepository reportRepository) : IReportService
 {
     public async Task<ApiResponse<SalesRevenueReportResponseDto>> GetSalesRevenueReportAsync(ReportQueryDto query)
     {
-        var rangeValidation = ValidateAndResolveRange(query.From, query.To);
+        var hasExplicitGroupBy = !string.IsNullOrWhiteSpace(query.GroupBy);
+        var groupBy = hasExplicitGroupBy ? NormalizeGroupBy(query.GroupBy) : null;
+        if (hasExplicitGroupBy && groupBy is null)
+        {
+            return ApiResponse<SalesRevenueReportResponseDto>.FailureResponse("Invalid groupBy. Use: day, month, year.");
+        }
+
+        var rangeValidation = await ValidateAndResolveSalesRevenueRangeAsync(query.From, query.To, groupBy);
         if (!rangeValidation.Success || rangeValidation.Data is not ReportDateRangeDto range)
         {
             return ApiResponse<SalesRevenueReportResponseDto>.FailureResponse(rangeValidation.Message, rangeValidation.Errors);
         }
 
-        var groupBy = NormalizeGroupBy(query.GroupBy);
-        if (groupBy is null)
-        {
-            return ApiResponse<SalesRevenueReportResponseDto>.FailureResponse("Invalid groupBy. Use: day, month, year.");
-        }
+        var effectiveGroupBy = groupBy ?? "day";
 
         var sales = await reportRepository.GetSalesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
         if (!string.IsNullOrWhiteSpace(query.CustomerId))
@@ -38,7 +41,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
         var creditSalesAmount = Round2(sales.Where(s => s.BalanceDue > 0).Sum(s => s.TotalAmount));
 
         var collections = sales
-            .GroupBy(s => BuildPeriodKey(s.SaleDate, groupBy))
+            .GroupBy(s => BuildPeriodKey(s.SaleDate, effectiveGroupBy))
             .Select(g => new SalesRevenuePeriodItemDto
             {
                 Period = g.Key,
@@ -51,7 +54,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
 
         var data = new SalesRevenueReportResponseDto
         {
-            Meta = BuildMeta("Sales Revenue Report", range, groupBy, query.IncludeCancelled, query.CustomerId, query.VendorId, "Cash/Credit split inferred using BalanceDue."),
+            Meta = BuildMeta("Sales Revenue Report", range, effectiveGroupBy, query.IncludeCancelled, query.CustomerId, query.VendorId, "Cash/Credit split inferred using BalanceDue."),
             TotalSalesAmount = totalSalesAmount,
             TotalInvoices = totalInvoices,
             CashSalesAmount = cashSalesAmount,
@@ -614,6 +617,63 @@ public class ReportService(IReportRepository reportRepository) : IReportService
                 });
         }
         
+        return ApiResponse<ReportDateRangeDto>.SuccessResponse(
+            new ReportDateRangeDto { FromUtc = resolvedFromUtc, ToUtc = resolvedToUtc },
+            "Date range validated.");
+    }
+
+    private async Task<ApiResponse<ReportDateRangeDto>> ValidateAndResolveSalesRevenueRangeAsync(DateTime? from, DateTime? to, string? groupBy)
+    {
+        var nowUtc = DateTime.UtcNow;
+        var allTimeStart = await reportRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
+
+        DateTime resolvedFrom;
+        DateTime rawTo;
+
+        if (from.HasValue || to.HasValue)
+        {
+            resolvedFrom = (from ?? allTimeStart).ToUniversalTime();
+            rawTo = (to ?? nowUtc).ToUniversalTime();
+        }
+        else
+        {
+            if (groupBy is "day")
+            {
+                resolvedFrom = nowUtc.Date;
+                rawTo = nowUtc;
+            }
+            else if (groupBy is "month")
+            {
+                resolvedFrom = new DateTime(nowUtc.Year, nowUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                rawTo = nowUtc;
+            }
+            else if (groupBy is "year")
+            {
+                resolvedFrom = new DateTime(nowUtc.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                rawTo = nowUtc;
+            }
+            else
+            {
+                resolvedFrom = allTimeStart;
+                rawTo = nowUtc;
+            }
+        }
+
+        var resolvedFromUtc = resolvedFrom.Date;
+        var resolvedToUtc = rawTo.TimeOfDay == TimeSpan.Zero
+            ? rawTo.Date.AddDays(1).AddTicks(-1)
+            : rawTo;
+
+        if (resolvedFromUtc > resolvedToUtc)
+        {
+            return ApiResponse<ReportDateRangeDto>.FailureResponse(
+                "Invalid date range: from cannot be greater than to.",
+                new Dictionary<string, List<string>>
+                {
+                    ["dateRange"] = ["from must be less than or equal to to"]
+                });
+        }
+
         return ApiResponse<ReportDateRangeDto>.SuccessResponse(
             new ReportDateRangeDto { FromUtc = resolvedFromUtc, ToUtc = resolvedToUtc },
             "Date range validated.");

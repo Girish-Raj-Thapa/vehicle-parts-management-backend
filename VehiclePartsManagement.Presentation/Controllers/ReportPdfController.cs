@@ -16,6 +16,11 @@ public class ReportPdfController(
     [Produces("application/pdf")]
     public async Task<IActionResult> GetSalesRevenuePdf([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetSalesRevenueReportAsync(query);
         if (!result.Success)
         {
