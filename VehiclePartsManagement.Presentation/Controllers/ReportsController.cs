@@ -28,6 +28,11 @@ public class ReportsController(
     [HttpGet("admin/purchase-expense")]
     public async Task<IActionResult> GetPurchaseExpense([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetPurchaseExpenseReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -55,6 +60,11 @@ public class ReportsController(
     [HttpGet("admin/profit-loss")]
     public async Task<IActionResult> GetProfitLoss([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetProfitLossReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }

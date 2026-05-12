@@ -42,6 +42,11 @@ public class ReportPdfController(
     [Produces("application/pdf")]
     public async Task<IActionResult> GetPurchaseExpensePdf([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetPurchaseExpenseReportAsync(query);
         if (!result.Success)
         {
@@ -63,6 +68,11 @@ public class ReportPdfController(
     [Produces("application/pdf")]
     public async Task<IActionResult> GetProfitLossPdf([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetProfitLossReportAsync(query);
         if (!result.Success)
         {
