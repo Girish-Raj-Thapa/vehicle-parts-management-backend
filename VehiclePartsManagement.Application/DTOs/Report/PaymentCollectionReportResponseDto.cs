@@ -1,3 +1,5 @@
+using VehiclePartsManagement.Application.Common;
+
 namespace VehiclePartsManagement.Application.DTOs.Report;
 
 public class PaymentCollectionReportResponseDto
@@ -11,4 +13,6 @@ public class PaymentCollectionReportResponseDto
     public decimal UnpaidBalanceAmount { get; set; }
     public List<PaymentMethodBreakdownItemDto> MethodBreakdown { get; set; } = [];
     public List<PaymentCollectionPeriodItemDto> Collections { get; set; } = [];
+    public PaginationMeta MethodBreakdownPagination { get; set; } = new();
+    public PaginationMeta CollectionsPagination { get; set; } = new();
 }

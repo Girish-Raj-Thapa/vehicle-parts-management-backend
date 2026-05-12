@@ -94,6 +94,11 @@ public class ReportPdfController(
     [Produces("application/pdf")]
     public async Task<IActionResult> GetPaymentCollectionPdf([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetPaymentCollectionReportAsync(query);
         if (!result.Success)
         {
@@ -115,6 +120,11 @@ public class ReportPdfController(
     [Produces("application/pdf")]
     public async Task<IActionResult> GetReceivablesPdf([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetReceivableReportAsync(query);
         if (!result.Success)
         {
@@ -136,6 +146,11 @@ public class ReportPdfController(
     [Produces("application/pdf")]
     public async Task<IActionResult> GetDailyCashFlowPdf([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetDailyCashFlowReportAsync(query);
         if (!result.Success)
         {
@@ -157,6 +172,11 @@ public class ReportPdfController(
     [Produces("application/pdf")]
     public async Task<IActionResult> GetDiscountsPdf([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetDiscountReportAsync(query);
         if (!result.Success)
         {
