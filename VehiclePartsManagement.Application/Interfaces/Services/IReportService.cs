@@ -46,7 +46,7 @@ public interface IReportService
     /// <summary>
     /// Generates the admin dashboard financial summary snapshot.
     /// </summary>
-    Task<ApiResponse<DashboardSummaryResponseDto>> GetDashboardSummaryAsync();
+    Task<ApiResponse<DashboardSummaryResponseDto>> GetDashboardSummaryAsync(ReportQueryDto query);
     Task<ApiResponse<IEnumerable<RegularCustomerReportDto>>> GetRegularCustomersAsync();
     Task<ApiResponse<IEnumerable<TopSpenderReportDto>>> GetTopSpendersAsync();
     Task<ApiResponse<IEnumerable<PendingCreditReportDto>>> GetPendingCreditsAsync();

@@ -496,22 +496,43 @@ public class ReportService(IReportRepository reportRepository) : IReportService
         return ApiResponse<DiscountReportResponseDto>.SuccessResponse(data, "Discount report generated successfully.");
     }
 
-    public async Task<ApiResponse<DashboardSummaryResponseDto>> GetDashboardSummaryAsync()
+    public async Task<ApiResponse<DashboardSummaryResponseDto>> GetDashboardSummaryAsync(ReportQueryDto query)
     {
+        var hasExplicitGroupBy = !string.IsNullOrWhiteSpace(query.GroupBy);
+        var groupBy = hasExplicitGroupBy ? NormalizeGroupBy(query.GroupBy) : null;
+        if (hasExplicitGroupBy && groupBy is null)
+        {
+            return ApiResponse<DashboardSummaryResponseDto>.FailureResponse("Invalid groupBy. Use: day, month, year.");
+        }
+
+        var rangeValidation = await ValidateAndResolveSummaryRangeAsync(query.From, query.To, groupBy);
+        if (!rangeValidation.Success || rangeValidation.Data is not ReportDateRangeDto range)
+        {
+            return ApiResponse<DashboardSummaryResponseDto>.FailureResponse(rangeValidation.Message, rangeValidation.Errors);
+        }
+
         var nowUtc = DateTime.UtcNow;
         var todayStart = nowUtc.Date;
         var todayEnd = todayStart.AddDays(1).AddTicks(-1);
-        var monthStart = new DateTime(nowUtc.Year, nowUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var monthEnd = nowUtc;
+        var summaryStart = range.FromUtc;
+        var summaryEnd = range.ToUtc;
 
-        var monthSales = await reportRepository.GetSalesWithDetailsAsync(monthStart, monthEnd, includeCancelled: false);
-        var todaySales = monthSales.Where(s => s.SaleDate >= todayStart && s.SaleDate <= todayEnd).ToList();
-        var monthPurchases = await reportRepository.GetPurchasesWithDetailsAsync(monthStart, monthEnd, includeCancelled: false);
-        var monthPayments = await reportRepository.GetPaymentsWithSaleAsync(monthStart, monthEnd);
-        var monthServices = await reportRepository.GetServiceRecordsAsync(monthStart, monthEnd);
-        var outstandingSales = await reportRepository.GetOutstandingSalesAsync();
+        var monthSales = await reportRepository.GetSalesWithDetailsAsync(summaryStart, summaryEnd, includeCancelled: query.IncludeCancelled);
+        var monthPurchases = await reportRepository.GetPurchasesWithDetailsAsync(summaryStart, summaryEnd, includeCancelled: query.IncludeCancelled);
+        var monthPayments = await reportRepository.GetPaymentsWithSaleAsync(summaryStart, summaryEnd);
+        var monthServices = await reportRepository.GetServiceRecordsAsync(summaryStart, summaryEnd);
+        var outstandingSales = await reportRepository.GetSalesWithBalancesAsync(summaryStart, summaryEnd, query.IncludeCancelled);
+        outstandingSales = outstandingSales.Where(s => s.BalanceDue > 0).ToList();
         var lowStockParts = await reportRepository.GetLowStockPartsAsync();
 
+        if (!string.IsNullOrWhiteSpace(query.CustomerId))
+        {
+            monthSales = monthSales.Where(s => s.CustomerApplicationUserId == query.CustomerId).ToList();
+            monthPayments = monthPayments.Where(p => p.Sale.CustomerApplicationUserId == query.CustomerId).ToList();
+            outstandingSales = outstandingSales.Where(s => s.CustomerApplicationUserId == query.CustomerId).ToList();
+        }
+
+        var todaySales = monthSales.Where(s => s.SaleDate >= todayStart && s.SaleDate <= todayEnd).ToList();
         var monthSalesAmount = Round2(monthSales.Sum(s => s.TotalAmount));
         var todaySalesAmount = Round2(todaySales.Sum(s => s.TotalAmount));
         var monthPurchasesAmount = Round2(monthPurchases.Sum(p => p.TotalAmount));
@@ -548,10 +569,12 @@ public class ReportService(IReportRepository reportRepository) : IReportService
             {
                 ReportTitle = "Financial Dashboard Summary",
                 GeneratedAtUtc = DateTime.UtcNow,
-                DateRange = new ReportDateRangeDto { FromUtc = monthStart, ToUtc = monthEnd },
-                GroupBy = "month",
-                IncludeCancelled = false,
-                CalculationNote = "Estimated profit and low-stock risk are derived from existing sale/purchase/service/part fields."
+                DateRange = new ReportDateRangeDto { FromUtc = summaryStart, ToUtc = summaryEnd },
+                GroupBy = groupBy ?? "all-time",
+                IncludeCancelled = query.IncludeCancelled,
+                CustomerId = query.CustomerId,
+                VendorId = null,
+                CalculationNote = "Explicit from/to overrides range defaults. Without from/to: groupBy day/month/year maps to current day/month/year, otherwise summary uses all-time (earliest record to now). Estimated profit and low-stock risk are derived from existing sale/purchase/service/part fields."
             },
             TodaySales = todaySalesAmount,
             MonthSales = monthSalesAmount,
@@ -591,6 +614,64 @@ public class ReportService(IReportRepository reportRepository) : IReportService
                 });
         }
         
+        return ApiResponse<ReportDateRangeDto>.SuccessResponse(
+            new ReportDateRangeDto { FromUtc = resolvedFromUtc, ToUtc = resolvedToUtc },
+            "Date range validated.");
+    }
+
+    private async Task<ApiResponse<ReportDateRangeDto>> ValidateAndResolveSummaryRangeAsync(DateTime? from, DateTime? to, string? groupBy)
+    {
+        var nowUtc = DateTime.UtcNow;
+        var allTimeStart = await reportRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
+        DateTime resolvedFrom;
+        DateTime rawTo;
+
+        // Priority: explicit date filters win over groupBy-derived default ranges.
+        if (from.HasValue || to.HasValue)
+        {
+            resolvedFrom = (from ?? allTimeStart).ToUniversalTime();
+            rawTo = (to ?? nowUtc).ToUniversalTime();
+        }
+        else
+        {
+            if (groupBy is "day")
+            {
+                resolvedFrom = nowUtc.Date;
+                rawTo = nowUtc;
+            }
+            else if (groupBy is "month")
+            {
+                resolvedFrom = new DateTime(nowUtc.Year, nowUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                rawTo = nowUtc;
+            }
+            else if (groupBy is "year")
+            {
+                resolvedFrom = new DateTime(nowUtc.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                rawTo = nowUtc;
+            }
+            else
+            {
+                // /summary with no dates and no valid groupBy => all-time.
+                resolvedFrom = allTimeStart;
+                rawTo = nowUtc;
+            }
+        }
+
+        var resolvedFromUtc = resolvedFrom.Date;
+        var resolvedToUtc = rawTo.TimeOfDay == TimeSpan.Zero
+            ? rawTo.Date.AddDays(1).AddTicks(-1)
+            : rawTo;
+
+        if (resolvedFromUtc > resolvedToUtc)
+        {
+            return ApiResponse<ReportDateRangeDto>.FailureResponse(
+                "Invalid date range: from cannot be greater than to.",
+                new Dictionary<string, List<string>>
+                {
+                    ["dateRange"] = ["from must be less than or equal to to"]
+                });
+        }
+
         return ApiResponse<ReportDateRangeDto>.SuccessResponse(
             new ReportDateRangeDto { FromUtc = resolvedFromUtc, ToUtc = resolvedToUtc },
             "Date range validated.");

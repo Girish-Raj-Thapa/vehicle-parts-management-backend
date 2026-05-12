@@ -101,6 +101,35 @@ public class ReportRepository(AppDbContext context) : IReportRepository
             .Where(p => p.IsActive && p.CurrentStock <= p.LowStockThreshold)
             .ToListAsync();
     }
+    
+    public async Task<DateTime?> GetDashboardStartDateUtcAsync()
+    {
+        var saleMin = await Context.Sales
+            .AsNoTracking()
+            .Select(s => (DateTime?)s.SaleDate)
+            .MinAsync();
+
+        var purchaseMin = await Context.Purchases
+            .AsNoTracking()
+            .Select(p => (DateTime?)p.PurchaseDate)
+            .MinAsync();
+
+        var paymentMin = await Context.Payments
+            .AsNoTracking()
+            .Select(p => (DateTime?)p.PaymentDate)
+            .MinAsync();
+
+        var serviceMin = await Context.ServiceRecords
+            .AsNoTracking()
+            .Select(sr => (DateTime?)sr.ServiceDate)
+            .MinAsync();
+
+        return new[] { saleMin, purchaseMin, paymentMin, serviceMin }
+            .Where(d => d.HasValue)
+            .Select(d => d!.Value)
+            .DefaultIfEmpty()
+            .Min();
+    }
 
     public async Task<IEnumerable<RegularCustomerReportDto>> GetRegularCustomersAsync()
     {

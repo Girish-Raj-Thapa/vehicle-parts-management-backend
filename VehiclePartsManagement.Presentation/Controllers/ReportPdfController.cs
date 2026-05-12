@@ -161,9 +161,14 @@ public class ReportPdfController(
     [Authorize(Roles = "Admin")]
     [HttpGet("admin/summary")]
     [Produces("application/pdf")]
-    public async Task<IActionResult> GetDashboardSummaryPdf()
+    public async Task<IActionResult> GetDashboardSummaryPdf([FromQuery] ReportQueryDto query)
     {
-        var result = await reportService.GetDashboardSummaryAsync();
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
+        var result = await reportService.GetDashboardSummaryAsync(query);
         if (!result.Success)
         {
             return BadRequest(result);

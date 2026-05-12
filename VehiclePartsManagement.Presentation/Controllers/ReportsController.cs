@@ -75,9 +75,14 @@ public class ReportsController(
     
     [Authorize(Roles = "Admin")]
     [HttpGet("admin/summary")]
-    public async Task<IActionResult> GetDashboardSummary()
+    public async Task<IActionResult> GetDashboardSummary([FromQuery] ReportQueryDto query)
     {
-        var result = await reportService.GetDashboardSummaryAsync();
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
+        var result = await reportService.GetDashboardSummaryAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
