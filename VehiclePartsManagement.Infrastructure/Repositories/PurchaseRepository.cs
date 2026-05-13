@@ -27,12 +27,12 @@ public class PurchaseRepository(AppDbContext context)
 
         if (fromDate.HasValue)
         {
-            query = query.Where(p => p.PurchaseDate.Date >= fromDate.Value.Date);
+            query = query.Where(p => p.PurchaseDate >= fromDate.Value);
         }
 
         if (toDate.HasValue)
         {
-            query = query.Where(p => p.PurchaseDate.Date <= toDate.Value.Date);
+            query = query.Where(p => p.PurchaseDate <= toDate.Value);
         }
 
         var totalItems = await query.CountAsync();

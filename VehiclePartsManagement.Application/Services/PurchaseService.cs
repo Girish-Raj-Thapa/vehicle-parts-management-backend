@@ -24,8 +24,12 @@ public class PurchaseService(
                 "dateRange");
         }
 
-        var fromDate = query.FromDate?.ToDateTime(TimeOnly.MinValue);
-        var toDate = query.ToDate?.ToDateTime(TimeOnly.MaxValue);
+        DateTime? fromDate = query.FromDate.HasValue
+            ? DateTime.SpecifyKind(query.FromDate.Value.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc)
+            : null;
+        DateTime? toDate = query.ToDate.HasValue
+            ? DateTime.SpecifyKind(query.ToDate.Value.ToDateTime(TimeOnly.MaxValue), DateTimeKind.Utc)
+            : null;
 
         var (items, totalItems) = await purchaseRepository.GetPagedAsync(
             page,
