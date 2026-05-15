@@ -28,4 +28,6 @@ public interface IVehicleService
         string? applicationUserId,
         int page,
         int pageSize);
+
+    Task<ApiResponse<List<VehicleListItemDto>>> GetByCustomerIdAsync(string customerId);
 }
