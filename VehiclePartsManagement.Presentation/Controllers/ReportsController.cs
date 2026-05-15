@@ -14,6 +14,11 @@ public class ReportsController(
     [HttpGet("admin/sales-revenue")]
     public async Task<IActionResult> GetSalesRevenue([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetSalesRevenueReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -23,6 +28,11 @@ public class ReportsController(
     [HttpGet("admin/purchase-expense")]
     public async Task<IActionResult> GetPurchaseExpense([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetPurchaseExpenseReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -32,6 +42,11 @@ public class ReportsController(
     [HttpGet("admin/payment-collection")]
     public async Task<IActionResult> GetPaymentCollection([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetPaymentCollectionReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -41,6 +56,11 @@ public class ReportsController(
     [HttpGet("admin/receivables")]
     public async Task<IActionResult> GetReceivables([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetReceivableReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -50,6 +70,11 @@ public class ReportsController(
     [HttpGet("admin/profit-loss")]
     public async Task<IActionResult> GetProfitLoss([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetProfitLossReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -59,6 +84,11 @@ public class ReportsController(
     [HttpGet("admin/daily-cash-flow")]
     public async Task<IActionResult> GetDailyCashFlow([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetDailyCashFlowReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -68,6 +98,11 @@ public class ReportsController(
     [HttpGet("admin/discounts")]
     public async Task<IActionResult> GetDiscounts([FromQuery] ReportQueryDto query)
     {
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
         var result = await reportService.GetDiscountReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -75,9 +110,14 @@ public class ReportsController(
     
     [Authorize(Roles = "Admin")]
     [HttpGet("admin/summary")]
-    public async Task<IActionResult> GetDashboardSummary()
+    public async Task<IActionResult> GetDashboardSummary([FromQuery] ReportQueryDto query)
     {
-        var result = await reportService.GetDashboardSummaryAsync();
+        if (!Request.Query.ContainsKey("groupBy"))
+        {
+            query.GroupBy = string.Empty;
+        }
+
+        var result = await reportService.GetDashboardSummaryAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 

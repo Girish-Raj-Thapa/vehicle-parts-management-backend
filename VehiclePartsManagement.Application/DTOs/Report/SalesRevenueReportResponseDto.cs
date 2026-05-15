@@ -1,3 +1,5 @@
+using VehiclePartsManagement.Application.Common;
+
 namespace VehiclePartsManagement.Application.DTOs.Report;
 
 public class SalesRevenueReportResponseDto
@@ -9,4 +11,5 @@ public class SalesRevenueReportResponseDto
     public decimal CreditSalesAmount { get; set; }
     public decimal TotalDiscountAmount { get; set; }
     public List<SalesRevenuePeriodItemDto> Collections { get; set; } = [];
+    public PaginationMeta CollectionsPagination { get; set; } = new();
 }

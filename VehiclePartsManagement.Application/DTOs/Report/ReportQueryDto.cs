@@ -42,4 +42,58 @@ public class ReportQueryDto
     /// Overdue threshold in days for receivable calculations.
     /// </summary>
     public int OverdueDays { get; set; } = 30;
+
+    [Range(1, int.MaxValue, ErrorMessage = "page must be greater than or equal to 1")]
+    public int Page { get; set; } = 1;
+
+    [Range(1, 10, ErrorMessage = "pageSize must be between 1 and 10")]
+    public int PageSize { get; set; } = 10;
+
+    [Range(1, int.MaxValue, ErrorMessage = "vendorPage must be greater than or equal to 1")]
+    public int? VendorPage { get; set; }
+
+    [Range(1, 10, ErrorMessage = "vendorPageSize must be between 1 and 10")]
+    public int? VendorPageSize { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "partPage must be greater than or equal to 1")]
+    public int? PartPage { get; set; }
+
+    [Range(1, 10, ErrorMessage = "partPageSize must be between 1 and 10")]
+    public int? PartPageSize { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "collectionPage must be greater than or equal to 1")]
+    public int? CollectionPage { get; set; }
+
+    [Range(1, 10, ErrorMessage = "collectionPageSize must be between 1 and 10")]
+    public int? CollectionPageSize { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "methodPage must be greater than or equal to 1")]
+    public int? MethodPage { get; set; }
+
+    [Range(1, 10, ErrorMessage = "methodPageSize must be between 1 and 10")]
+    public int? MethodPageSize { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "customerBalancePage must be greater than or equal to 1")]
+    public int? CustomerBalancePage { get; set; }
+
+    [Range(1, 10, ErrorMessage = "customerBalancePageSize must be between 1 and 10")]
+    public int? CustomerBalancePageSize { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "overdueInvoicePage must be greater than or equal to 1")]
+    public int? OverdueInvoicePage { get; set; }
+
+    [Range(1, 10, ErrorMessage = "overdueInvoicePageSize must be between 1 and 10")]
+    public int? OverdueInvoicePageSize { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "dailyFlowPage must be greater than or equal to 1")]
+    public int? DailyFlowPage { get; set; }
+
+    [Range(1, 10, ErrorMessage = "dailyFlowPageSize must be between 1 and 10")]
+    public int? DailyFlowPageSize { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "pendingReceivablePage must be greater than or equal to 1")]
+    public int? PendingReceivablePage { get; set; }
+
+    [Range(1, 10, ErrorMessage = "pendingReceivablePageSize must be between 1 and 10")]
+    public int? PendingReceivablePageSize { get; set; }
 }

@@ -1,3 +1,5 @@
+using VehiclePartsManagement.Application.Common;
+
 namespace VehiclePartsManagement.Application.DTOs.Report;
 
 public class DashboardSummaryResponseDto
@@ -11,4 +13,5 @@ public class DashboardSummaryResponseDto
     public decimal EstimatedMonthProfit { get; set; }
     public LowStockFinancialRiskItemDto LowStockFinancialRisk { get; set; } = new();
     public List<PendingReceivableItemDto> TopPendingReceivables { get; set; } = [];
+    public PaginationMeta TopPendingReceivablesPagination { get; set; } = new();
 }

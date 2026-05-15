@@ -1,3 +1,5 @@
+using VehiclePartsManagement.Application.Common;
+
 namespace VehiclePartsManagement.Application.DTOs.Report;
 
 public class PurchaseExpenseReportResponseDto
@@ -8,4 +10,7 @@ public class PurchaseExpenseReportResponseDto
     public List<PurchaseExpenseVendorItemDto> VendorSummaries { get; set; } = [];
     public List<PurchaseExpensePartItemDto> PartSummaries { get; set; } = [];
     public List<PurchaseExpensePeriodItemDto> Collections { get; set; } = [];
+    public PaginationMeta VendorSummariesPagination { get; set; } = new();
+    public PaginationMeta PartSummariesPagination { get; set; } = new();
+    public PaginationMeta CollectionsPagination { get; set; } = new();
 }

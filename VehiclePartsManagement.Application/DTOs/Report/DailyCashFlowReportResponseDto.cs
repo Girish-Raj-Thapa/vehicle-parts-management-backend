@@ -1,3 +1,5 @@
+using VehiclePartsManagement.Application.Common;
+
 namespace VehiclePartsManagement.Application.DTOs.Report;
 
 public class DailyCashFlowReportResponseDto
@@ -9,4 +11,6 @@ public class DailyCashFlowReportResponseDto
     public decimal ClosingBalance { get; set; }
     public List<PaymentMethodBreakdownItemDto> PaymentMethodBreakdown { get; set; } = [];
     public List<DailyCashFlowDayItemDto> DailyFlows { get; set; } = [];
+    public PaginationMeta PaymentMethodBreakdownPagination { get; set; } = new();
+    public PaginationMeta DailyFlowsPagination { get; set; } = new();
 }

@@ -42,6 +42,11 @@ public interface IReportRepository
     /// Returns parts currently at or below low-stock threshold.
     /// </summary>
     Task<List<Part>> GetLowStockPartsAsync();
+    
+    /// <summary>
+    /// Returns the earliest available business-transaction date across reporting sources.
+    /// </summary>
+    Task<DateTime?> GetDashboardStartDateUtcAsync();
     Task<IEnumerable<RegularCustomerReportDto>> GetRegularCustomersAsync();
     Task<IEnumerable<TopSpenderReportDto>> GetTopSpendersAsync();
     Task<IEnumerable<PendingCreditReportDto>> GetPendingCreditsAsync();
