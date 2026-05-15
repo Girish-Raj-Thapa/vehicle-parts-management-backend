@@ -1,15 +1,20 @@
-using System.Globalization;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using VehiclePartsManagement.Application.DTOs.Report;
 using VehiclePartsManagement.Application.Interfaces.Services;
+using VehiclePartsManagement.Application.Services.PdfService.Common;
 
 namespace VehiclePartsManagement.Application.Services;
 
 public class ReportPdfService : IReportPdfService
 {
-    private static readonly CultureInfo InvariantCulture = CultureInfo.InvariantCulture;
+    private const string PrimaryColor = "#1D4ED8";
+    private const string SecondaryTextColor = "#475569";
+    private const string MutedBackgroundColor = "#F8FAFC";
+    private const string BorderColor = "#E2E8F0";
+    private const string HeaderBackgroundColor = "#EEF2FF";
+    private const string ZebraBackgroundColor = "#F8FAFC";
 
     static ReportPdfService()
     {
@@ -19,516 +24,374 @@ public class ReportPdfService : IReportPdfService
     public Task<byte[]> GenerateSalesRevenueReportPdfAsync(SalesRevenueReportResponseDto report)
     {
         ArgumentNullException.ThrowIfNull(report);
-
-        var document = Document.Create(container =>
+        return Task.FromResult(GenerateDocument(report.Meta, container =>
         {
-            container.Page(page =>
+            container.Column(column =>
             {
-                page.Size(PageSizes.A4);
-                page.Margin(24);
-                page.DefaultTextStyle(x => x.FontSize(10));
-
-                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
-                page.Content().Element(c =>
+                column.Spacing(12);
+                column.Item().ShowEntire().Element(c => ComposeKpiCardGrid(c, new[]
                 {
-                    c.Column(column =>
+                    ("Total Sales", PdfFormatService.FormatCurrency(report.TotalSalesAmount), (string?)null),
+                    ("Total Invoices", report.TotalInvoices.ToString(), null),
+                    ("Cash Sales", PdfFormatService.FormatCurrency(report.CashSalesAmount), null),
+                    ("Credit Sales", PdfFormatService.FormatCurrency(report.CreditSalesAmount), null),
+                    ("Total Discount", PdfFormatService.FormatCurrency(report.TotalDiscountAmount), null)
+                }));
+
+                column.Item().Element(c => ComposeTable(
+                    c,
+                    "Period Breakdown",
+                    new[] { "Period", "Sales Amount", "Invoices", "Discount" },
+                    report.Collections.Select(x => new[]
                     {
-                        column.Spacing(12);
-                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
-                        {
-                            ("Total Sales", FormatMoney(report.TotalSalesAmount)),
-                            ("Total Invoices", report.TotalInvoices.ToString(InvariantCulture)),
-                            ("Cash Sales", FormatMoney(report.CashSalesAmount)),
-                            ("Credit Sales", FormatMoney(report.CreditSalesAmount)),
-                            ("Total Discount", FormatMoney(report.TotalDiscountAmount))
-                        }));
-
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Period Breakdown",
-                            new[] { "Period", "Sales Amount", "Invoices", "Discount" },
-                            report.Collections.Select(x => new[]
-                            {
-                                x.Period,
-                                FormatMoney(x.SalesAmount),
-                                x.InvoiceCount.ToString(InvariantCulture),
-                                FormatMoney(x.DiscountAmount)
-                            }).ToList(),
-                            new[] { 2f, 2f, 1f, 2f },
-                            new[] { false, true, true, true }));
-                    });
-                });
-                page.Footer().Element(ComposeFooter);
+                        x.Period,
+                        PdfFormatService.FormatCurrency(x.SalesAmount),
+                        x.InvoiceCount.ToString(),
+                        PdfFormatService.FormatCurrency(x.DiscountAmount)
+                    }).ToList(),
+                    new[] { 2f, 2f, 1f, 2f },
+                    new[] { false, true, true, true }));
             });
-        });
-
-        return Task.FromResult(document.GeneratePdf());
+        }));
     }
 
     public Task<byte[]> GeneratePurchaseExpenseReportPdfAsync(PurchaseExpenseReportResponseDto report)
     {
         ArgumentNullException.ThrowIfNull(report);
-
-        var document = Document.Create(container =>
+        return Task.FromResult(GenerateDocument(report.Meta, container =>
         {
-            container.Page(page =>
+            container.Column(column =>
             {
-                page.Size(PageSizes.A4);
-                page.Margin(24);
-                page.DefaultTextStyle(x => x.FontSize(10));
-
-                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
-                page.Content().Element(c =>
+                column.Spacing(12);
+                column.Item().ShowEntire().Element(c => ComposeKpiCardGrid(c, new[]
                 {
-                    c.Column(column =>
-                    {
-                        column.Spacing(12);
-                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
-                        {
-                            ("Total Purchase", FormatMoney(report.TotalPurchaseAmount)),
-                            ("Total Invoices", report.TotalPurchaseInvoices.ToString(InvariantCulture))
-                        }));
+                    ("Total Purchase", PdfFormatService.FormatCurrency(report.TotalPurchaseAmount), (string?)null),
+                    ("Total Invoices", report.TotalPurchaseInvoices.ToString(), null)
+                }));
 
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Vendor Summary",
-                            new[] { "Vendor", "Purchase Amount", "Invoices" },
-                            report.VendorSummaries.Select(x => new[]
-                            {
-                                $"{x.VendorName} (#{x.VendorId})",
-                                FormatMoney(x.PurchaseAmount),
-                                x.InvoiceCount.ToString(InvariantCulture)
-                            }).ToList(),
-                            new[] { 3f, 2f, 1f },
-                            new[] { false, true, true }));
+                column.Item().Element(c => ComposeTable(
+                    c, "Vendor Summary", new[] { "Vendor", "Purchase Amount", "Invoices" },
+                    report.VendorSummaries.Select(x => new[] { $"{x.VendorName} (#{x.VendorId})", PdfFormatService.FormatCurrency(x.PurchaseAmount), x.InvoiceCount.ToString() }).ToList(),
+                    new[] { 3f, 2f, 1f }, new[] { false, true, true }));
 
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Part Summary",
-                            new[] { "Part", "Qty Purchased", "Purchase Amount" },
-                            report.PartSummaries.Select(x => new[]
-                            {
-                                $"{x.PartName} (#{x.PartId})",
-                                x.QuantityPurchased.ToString(InvariantCulture),
-                                FormatMoney(x.PurchaseAmount)
-                            }).ToList(),
-                            new[] { 3f, 1.5f, 2f },
-                            new[] { false, true, true }));
+                column.Item().Element(c => ComposeTable(
+                    c, "Part Summary", new[] { "Part", "Qty Purchased", "Purchase Amount" },
+                    report.PartSummaries.Select(x => new[] { $"{x.PartName} (#{x.PartId})", x.QuantityPurchased.ToString(), PdfFormatService.FormatCurrency(x.PurchaseAmount) }).ToList(),
+                    new[] { 3f, 1.5f, 2f }, new[] { false, true, true }));
 
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Period Breakdown",
-                            new[] { "Period", "Purchase Amount", "Invoices" },
-                            report.Collections.Select(x => new[]
-                            {
-                                x.Period,
-                                FormatMoney(x.PurchaseAmount),
-                                x.InvoiceCount.ToString(InvariantCulture)
-                            }).ToList(),
-                            new[] { 2f, 2f, 1f },
-                            new[] { false, true, true }));
-                    });
-                });
-                page.Footer().Element(ComposeFooter);
+                column.Item().Element(c => ComposeTable(
+                    c, "Period Breakdown", new[] { "Period", "Purchase Amount", "Invoices" },
+                    report.Collections.Select(x => new[] { x.Period, PdfFormatService.FormatCurrency(x.PurchaseAmount), x.InvoiceCount.ToString() }).ToList(),
+                    new[] { 2f, 2f, 1f }, new[] { false, true, true }));
             });
-        });
-
-        return Task.FromResult(document.GeneratePdf());
+        }));
     }
 
     public Task<byte[]> GenerateProfitLossReportPdfAsync(ProfitLossReportResponseDto report)
     {
         ArgumentNullException.ThrowIfNull(report);
-
-        var document = Document.Create(container =>
+        return Task.FromResult(GenerateDocument(report.Meta, container =>
         {
-            container.Page(page =>
+            container.Column(column =>
             {
-                page.Size(PageSizes.A4);
-                page.Margin(24);
-                page.DefaultTextStyle(x => x.FontSize(10));
-
-                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
-                page.Content().Element(c =>
+                column.Spacing(12);
+                column.Item().ShowEntire().Element(c => ComposeKpiCardGrid(c, new[]
                 {
-                    c.Column(column =>
+                    ("Sales Revenue", PdfFormatService.FormatCurrency(report.TotalSalesRevenue), (string?)null),
+                    ("Purchase Cost", PdfFormatService.FormatCurrency(report.TotalPurchaseCost), null),
+                    ("Service Income", PdfFormatService.FormatCurrency(report.ServiceLaborIncome), null),
+                    ("Total Discount", PdfFormatService.FormatCurrency(report.TotalDiscountAmount), null),
+                    ("Gross Profit", PdfFormatService.FormatCurrency(report.EstimatedGrossProfit), null),
+                    ("Net Profit", PdfFormatService.FormatCurrency(report.EstimatedNetProfit), null)
+                }));
+
+                column.Item().Element(c => ComposeTable(
+                    c, "Period Breakdown", new[] { "Period", "Sales", "Purchase", "Service", "Discount", "Gross", "Net" },
+                    report.Collections.Select(x => new[]
                     {
-                        column.Spacing(12);
-                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
-                        {
-                            ("Sales Revenue", FormatMoney(report.TotalSalesRevenue)),
-                            ("Purchase Cost", FormatMoney(report.TotalPurchaseCost)),
-                            ("Service Labor Income", FormatMoney(report.ServiceLaborIncome)),
-                            ("Total Discount", FormatMoney(report.TotalDiscountAmount)),
-                            ("Estimated Gross Profit", FormatMoney(report.EstimatedGrossProfit)),
-                            ("Estimated Net Profit", FormatMoney(report.EstimatedNetProfit))
-                        }));
-
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Period Breakdown",
-                            new[]
-                            {
-                                "Period", "Sales", "Purchase", "Service", "Discount", "Gross", "Net"
-                            },
-                            report.Collections.Select(x => new[]
-                            {
-                                x.Period,
-                                FormatMoney(x.SalesRevenue),
-                                FormatMoney(x.PurchaseCost),
-                                FormatMoney(x.ServiceLaborIncome),
-                                FormatMoney(x.DiscountAmount),
-                                FormatMoney(x.EstimatedGrossProfit),
-                                FormatMoney(x.EstimatedNetProfit)
-                            }).ToList(),
-                            new[] { 1.7f, 1.3f, 1.3f, 1.2f, 1.2f, 1.2f, 1.2f },
-                            new[] { false, true, true, true, true, true, true }));
-                    });
-                });
-                page.Footer().Element(ComposeFooter);
+                        x.Period,
+                        PdfFormatService.FormatCurrency(x.SalesRevenue),
+                        PdfFormatService.FormatCurrency(x.PurchaseCost),
+                        PdfFormatService.FormatCurrency(x.ServiceLaborIncome),
+                        PdfFormatService.FormatCurrency(x.DiscountAmount),
+                        PdfFormatService.FormatCurrency(x.EstimatedGrossProfit),
+                        PdfFormatService.FormatCurrency(x.EstimatedNetProfit)
+                    }).ToList(),
+                    new[] { 1.7f, 1.3f, 1.3f, 1.2f, 1.2f, 1.2f, 1.2f },
+                    new[] { false, true, true, true, true, true, true }));
             });
-        });
-
-        return Task.FromResult(document.GeneratePdf());
+        }));
     }
 
     public Task<byte[]> GeneratePaymentCollectionReportPdfAsync(PaymentCollectionReportResponseDto report)
     {
         ArgumentNullException.ThrowIfNull(report);
-
-        var document = Document.Create(container =>
+        return Task.FromResult(GenerateDocument(report.Meta, container =>
         {
-            container.Page(page =>
+            container.Column(column =>
             {
-                page.Size(PageSizes.A4);
-                page.Margin(24);
-                page.DefaultTextStyle(x => x.FontSize(10));
-
-                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
-                page.Content().Element(c =>
+                column.Spacing(12);
+                column.Item().ShowEntire().Element(c => ComposeKpiCardGrid(c, new[]
                 {
-                    c.Column(column =>
-                    {
-                        column.Spacing(12);
-                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
-                        {
-                            ("Total Collected", FormatMoney(report.TotalCollectedAmount)),
-                            ("Cash Payments", FormatMoney(report.CashPaymentsAmount)),
-                            ("Online Payments", FormatMoney(report.OnlinePaymentsAmount)),
-                            ("Bank Payments", FormatMoney(report.BankPaymentsAmount)),
-                            ("Partial Payments", FormatMoney(report.PartialPaymentsAmount)),
-                            ("Unpaid Balance", FormatMoney(report.UnpaidBalanceAmount))
-                        }));
+                    ("Total Collected", PdfFormatService.FormatCurrency(report.TotalCollectedAmount), (string?)null),
+                    ("Cash", PdfFormatService.FormatCurrency(report.CashPaymentsAmount), null),
+                    ("Online", PdfFormatService.FormatCurrency(report.OnlinePaymentsAmount), null),
+                    ("Bank", PdfFormatService.FormatCurrency(report.BankPaymentsAmount), null),
+                    ("Partial", PdfFormatService.FormatCurrency(report.PartialPaymentsAmount), null),
+                    ("Unpaid", PdfFormatService.FormatCurrency(report.UnpaidBalanceAmount), null)
+                }));
 
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Payment Method Breakdown",
-                            new[] { "Method", "Amount", "Count" },
-                            report.MethodBreakdown.Select(x => new[]
-                            {
-                                x.PaymentMethod,
-                                FormatMoney(x.Amount),
-                                x.Count.ToString(InvariantCulture)
-                            }).ToList(),
-                            new[] { 2.5f, 2f, 1f },
-                            new[] { false, true, true }));
+                column.Item().Element(c => ComposeTable(
+                    c, "Payment Method Breakdown",
+                    new[] { "Method", "Amount", "Count" },
+                    report.MethodBreakdown.Select(x => new[] { x.PaymentMethod, PdfFormatService.FormatCurrency(x.Amount), x.Count.ToString() }).ToList(),
+                    new[] { 2.5f, 2f, 1f }, new[] { false, true, true }));
 
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Period Breakdown",
-                            new[] { "Period", "Collected Amount", "Payments" },
-                            report.Collections.Select(x => new[]
-                            {
-                                x.Period,
-                                FormatMoney(x.CollectedAmount),
-                                x.PaymentCount.ToString(InvariantCulture)
-                            }).ToList(),
-                            new[] { 2f, 2f, 1f },
-                            new[] { false, true, true }));
-                    });
-                });
-                page.Footer().Element(ComposeFooter);
+                column.Item().Element(c => ComposeTable(
+                    c, "Period Breakdown",
+                    new[] { "Period", "Collected Amount", "Payments" },
+                    report.Collections.Select(x => new[] { x.Period, PdfFormatService.FormatCurrency(x.CollectedAmount), x.PaymentCount.ToString() }).ToList(),
+                    new[] { 2f, 2f, 1f }, new[] { false, true, true }));
             });
-        });
-
-        return Task.FromResult(document.GeneratePdf());
+        }));
     }
 
     public Task<byte[]> GenerateReceivableReportPdfAsync(ReceivableReportResponseDto report)
     {
         ArgumentNullException.ThrowIfNull(report);
-
-        var document = Document.Create(container =>
+        return Task.FromResult(GenerateDocument(report.Meta, container =>
         {
-            container.Page(page =>
+            container.Column(column =>
             {
-                page.Size(PageSizes.A4);
-                page.Margin(24);
-                page.DefaultTextStyle(x => x.FontSize(10));
-
-                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
-                page.Content().Element(c =>
+                column.Spacing(12);
+                column.Item().ShowEntire().Element(c => ComposeKpiCardGrid(c, new[]
                 {
-                    c.Column(column =>
-                    {
-                        column.Spacing(12);
-                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
-                        {
-                            ("Total Credit Outstanding", FormatMoney(report.TotalCreditOutstanding)),
-                            ("Overdue Credit Amount", FormatMoney(report.OverdueCreditAmount))
-                        }));
+                    ("Total Credit Outstanding", PdfFormatService.FormatCurrency(report.TotalCreditOutstanding), (string?)null),
+                    ("Overdue Credit", PdfFormatService.FormatCurrency(report.OverdueCreditAmount), null)
+                }));
 
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Customer Balances",
-                            new[] { "Customer", "Pending Balance", "Overdue Balance", "Invoices" },
-                            report.CustomerBalances.Select(x => new[]
-                            {
-                                $"{x.CustomerName} ({x.CustomerId})",
-                                FormatMoney(x.PendingBalance),
-                                FormatMoney(x.OverdueBalance),
-                                x.InvoiceCount.ToString(InvariantCulture)
-                            }).ToList(),
-                            new[] { 2.8f, 1.7f, 1.7f, 1f },
-                            new[] { false, true, true, true }));
+                column.Item().Element(c => ComposeTable(
+                    c, "Customer Balances",
+                    new[] { "Customer", "Pending", "Overdue", "Invoices" },
+                    report.CustomerBalances.Select(x => new[] { $"{x.CustomerName} ({x.CustomerId})", PdfFormatService.FormatCurrency(x.PendingBalance), PdfFormatService.FormatCurrency(x.OverdueBalance), x.InvoiceCount.ToString() }).ToList(),
+                    new[] { 2.8f, 1.7f, 1.7f, 1f }, new[] { false, true, true, true }));
 
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Overdue Invoices",
-                            new[] { "Invoice No", "Customer", "Due Date", "Balance Due", "Days Overdue" },
-                            report.OverdueInvoices.Select(x => new[]
-                            {
-                                x.InvoiceNo,
-                                x.CustomerName,
-                                FormatDateTime(x.DueDate),
-                                FormatMoney(x.BalanceDue),
-                                x.DaysOverdue.ToString(InvariantCulture)
-                            }).ToList(),
-                            new[] { 1.4f, 2.2f, 1.8f, 1.4f, 1.2f },
-                            new[] { false, false, true, true, true }));
-                    });
-                });
-                page.Footer().Element(ComposeFooter);
+                column.Item().Element(c => ComposeTable(
+                    c, "Overdue Invoices",
+                    new[] { "Invoice", "Customer", "Due Date", "Balance", "Days" },
+                    report.OverdueInvoices.Select(x => new[] { x.InvoiceNo, x.CustomerName, PdfFormatService.FormatDateTimeUtc(x.DueDate), PdfFormatService.FormatCurrency(x.BalanceDue), x.DaysOverdue.ToString() }).ToList(),
+                    new[] { 1.4f, 2.2f, 1.8f, 1.4f, 1.2f }, new[] { false, false, true, true, true }));
             });
-        });
-
-        return Task.FromResult(document.GeneratePdf());
+        }));
     }
 
     public Task<byte[]> GenerateDailyCashFlowReportPdfAsync(DailyCashFlowReportResponseDto report)
     {
         ArgumentNullException.ThrowIfNull(report);
-
-        var document = Document.Create(container =>
+        return Task.FromResult(GenerateDocument(report.Meta, container =>
         {
-            container.Page(page =>
+            container.Column(column =>
             {
-                page.Size(PageSizes.A4);
-                page.Margin(24);
-                page.DefaultTextStyle(x => x.FontSize(10));
-
-                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
-                page.Content().Element(c =>
+                column.Spacing(12);
+                column.Item().ShowEntire().Element(c => ComposeKpiCardGrid(c, new[]
                 {
-                    c.Column(column =>
-                    {
-                        column.Spacing(12);
-                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
-                        {
-                            ("Opening Balance", FormatMoney(report.OpeningBalance)),
-                            ("Money Received", FormatMoney(report.MoneyReceived)),
-                            ("Spent on Purchases", FormatMoney(report.MoneySpentOnPurchases)),
-                            ("Closing Balance", FormatMoney(report.ClosingBalance))
-                        }));
+                    ("Opening", PdfFormatService.FormatCurrency(report.OpeningBalance), (string?)null),
+                    ("Received", PdfFormatService.FormatCurrency(report.MoneyReceived), null),
+                    ("Spent", PdfFormatService.FormatCurrency(report.MoneySpentOnPurchases), null),
+                    ("Closing", PdfFormatService.FormatCurrency(report.ClosingBalance), null)
+                }));
 
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Payment Method Breakdown",
-                            new[] { "Method", "Amount", "Count" },
-                            report.PaymentMethodBreakdown.Select(x => new[]
-                            {
-                                x.PaymentMethod,
-                                FormatMoney(x.Amount),
-                                x.Count.ToString(InvariantCulture)
-                            }).ToList(),
-                            new[] { 2.5f, 2f, 1f },
-                            new[] { false, true, true }));
+                column.Item().Element(c => ComposeTable(
+                    c, "Payment Method Breakdown",
+                    new[] { "Method", "Amount", "Count" },
+                    report.PaymentMethodBreakdown.Select(x => new[] { x.PaymentMethod, PdfFormatService.FormatCurrency(x.Amount), x.Count.ToString() }).ToList(),
+                    new[] { 2.5f, 2f, 1f }, new[] { false, true, true }));
 
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Daily Flows",
-                            new[] { "Date (UTC)", "Received", "Spent", "Net Flow" },
-                            report.DailyFlows.Select(x => new[]
-                            {
-                                FormatDateTime(x.DateUtc),
-                                FormatMoney(x.Received),
-                                FormatMoney(x.Spent),
-                                FormatMoney(x.NetFlow)
-                            }).ToList(),
-                            new[] { 2f, 1.6f, 1.6f, 1.6f },
-                            new[] { false, true, true, true }));
-                    });
-                });
-                page.Footer().Element(ComposeFooter);
+                column.Item().Element(c => ComposeTable(
+                    c, "Daily Flows",
+                    new[] { "Date", "Received", "Spent", "Net" },
+                    report.DailyFlows.Select(x => new[] { PdfFormatService.FormatDateUtc(x.DateUtc), PdfFormatService.FormatCurrency(x.Received), PdfFormatService.FormatCurrency(x.Spent), PdfFormatService.FormatCurrency(x.NetFlow) }).ToList(),
+                    new[] { 2f, 1.6f, 1.6f, 1.6f }, new[] { false, true, true, true }));
             });
-        });
-
-        return Task.FromResult(document.GeneratePdf());
+        }));
     }
 
     public Task<byte[]> GenerateDiscountReportPdfAsync(DiscountReportResponseDto report)
     {
         ArgumentNullException.ThrowIfNull(report);
-
-        var document = Document.Create(container =>
+        return Task.FromResult(GenerateDocument(report.Meta, container =>
         {
-            container.Page(page =>
+            container.Column(column =>
             {
-                page.Size(PageSizes.A4);
-                page.Margin(24);
-                page.DefaultTextStyle(x => x.FontSize(10));
-
-                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
-                page.Content().Element(c =>
+                column.Spacing(12);
+                column.Item().ShowEntire().Element(c => ComposeKpiCardGrid(c, new[]
                 {
-                    c.Column(column =>
-                    {
-                        column.Spacing(12);
-                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
-                        {
-                            ("Total Discount Given", FormatMoney(report.TotalDiscountGiven)),
-                            ("Discounted Invoice Count", report.DiscountedInvoiceCount.ToString(InvariantCulture)),
-                            ("Loyalty 10% Invoice Count", report.Loyalty10PercentInvoiceCount.ToString(InvariantCulture)),
-                            ("Impact on Revenue (%)", FormatMoney(report.ImpactOnRevenuePercent))
-                        }));
+                    ("Total Discount", PdfFormatService.FormatCurrency(report.TotalDiscountGiven), (string?)null),
+                    ("Discounted Invoices", report.DiscountedInvoiceCount.ToString(), null),
+                    ("Loyalty 10%", report.Loyalty10PercentInvoiceCount.ToString(), null),
+                    ("Impact on Revenue", PdfFormatService.FormatPercent(report.ImpactOnRevenuePercent), null)
+                }));
 
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Customer Discounts",
-                            new[] { "Customer", "Discount Amount", "Invoices" },
-                            report.CustomerDiscounts.Select(x => new[]
-                            {
-                                $"{x.CustomerName} ({x.CustomerId})",
-                                FormatMoney(x.DiscountAmount),
-                                x.InvoiceCount.ToString(InvariantCulture)
-                            }).ToList(),
-                            new[] { 3f, 2f, 1f },
-                            new[] { false, true, true }));
+                column.Item().Element(c => ComposeTable(
+                    c, "Customer Discounts",
+                    new[] { "Customer", "Discount", "Invoices" },
+                    report.CustomerDiscounts.Select(x => new[] { $"{x.CustomerName} ({x.CustomerId})", PdfFormatService.FormatCurrency(x.DiscountAmount), x.InvoiceCount.ToString() }).ToList(),
+                    new[] { 3f, 2f, 1f }, new[] { false, true, true }));
 
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Period Breakdown",
-                            new[] { "Period", "Discount Amount", "Discounted Invoices" },
-                            report.Collections.Select(x => new[]
-                            {
-                                x.Period,
-                                FormatMoney(x.DiscountAmount),
-                                x.DiscountedInvoiceCount.ToString(InvariantCulture)
-                            }).ToList(),
-                            new[] { 2f, 2f, 1.4f },
-                            new[] { false, true, true }));
-                    });
-                });
-                page.Footer().Element(ComposeFooter);
+                column.Item().Element(c => ComposeTable(
+                    c, "Period Breakdown",
+                    new[] { "Period", "Discount", "Discounted Invoices" },
+                    report.Collections.Select(x => new[] { x.Period, PdfFormatService.FormatCurrency(x.DiscountAmount), x.DiscountedInvoiceCount.ToString() }).ToList(),
+                    new[] { 2f, 2f, 1.4f }, new[] { false, true, true }));
             });
-        });
-
-        return Task.FromResult(document.GeneratePdf());
+        }));
     }
 
     public Task<byte[]> GenerateDashboardSummaryPdfAsync(DashboardSummaryResponseDto report)
     {
         ArgumentNullException.ThrowIfNull(report);
+        return Task.FromResult(GenerateDocument(report.Meta, container =>
+        {
+            container.Column(column =>
+            {
+                column.Spacing(12);
+                column.Item().ShowEntire().Element(c => ComposeKpiCardGrid(c, new[]
+                {
+                    ("Today Sales", PdfFormatService.FormatCurrency(report.TodaySales), (string?)null),
+                    ("Month Sales", PdfFormatService.FormatCurrency(report.MonthSales), null),
+                    ("Month Purchases", PdfFormatService.FormatCurrency(report.MonthPurchases), null),
+                    ("Payments Received", PdfFormatService.FormatCurrency(report.MonthPaymentsReceived), null),
+                    ("Pending Credit", PdfFormatService.FormatCurrency(report.PendingCreditAmount), null),
+                    ("Estimated Profit", PdfFormatService.FormatCurrency(report.EstimatedMonthProfit), null)
+                }));
 
+                column.Item().ShowEntire().Element(c => ComposeKpiCardGrid(c, new[]
+                {
+                    ("Low Stock At-Risk Parts", report.LowStockFinancialRisk.AtRiskPartCount.ToString(), (string?)null),
+                    ("Low Stock Risk Value", PdfFormatService.FormatCurrency(report.LowStockFinancialRisk.EstimatedRiskValue), null)
+                }));
+
+                column.Item().Element(c => ComposeTable(
+                    c, "Top Pending Receivables",
+                    new[] { "Customer", "Balance Due" },
+                    report.TopPendingReceivables.Select(x => new[] { $"{x.CustomerName} ({x.CustomerId})", PdfFormatService.FormatCurrency(x.BalanceDue) }).ToList(),
+                    new[] { 3f, 2f }, new[] { false, true }));
+            });
+        }));
+    }
+
+    private static byte[] GenerateDocument(ReportMetaDto meta, Action<IContainer> composeContent)
+    {
         var document = Document.Create(container =>
         {
             container.Page(page =>
             {
                 page.Size(PageSizes.A4);
                 page.Margin(24);
-                page.DefaultTextStyle(x => x.FontSize(10));
+                page.DefaultTextStyle(x => x.FontSize(11));
 
-                page.Header().Element(c => ComposeMetaHeader(c, report.Meta));
-                page.Content().Element(c =>
+                page.Header().Element(c => ComposeHeader(c, meta));
+                page.Content().Element(c => composeContent(c));
+                page.Footer().Element(footer =>
                 {
-                    c.Column(column =>
+                    footer.AlignCenter().Text(text =>
                     {
-                        column.Spacing(12);
-                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
-                        {
-                            ("Today Sales", FormatMoney(report.TodaySales)),
-                            ("Month Sales", FormatMoney(report.MonthSales)),
-                            ("Month Purchases", FormatMoney(report.MonthPurchases)),
-                            ("Month Payments Received", FormatMoney(report.MonthPaymentsReceived)),
-                            ("Pending Credit Amount", FormatMoney(report.PendingCreditAmount)),
-                            ("Estimated Month Profit", FormatMoney(report.EstimatedMonthProfit))
-                        }));
-
-                        column.Item().Element(k => ComposeKeyValueGrid(k, new[]
-                        {
-                            ("Low Stock At-Risk Parts", report.LowStockFinancialRisk.AtRiskPartCount.ToString(InvariantCulture)),
-                            ("Estimated Low Stock Risk Value", FormatMoney(report.LowStockFinancialRisk.EstimatedRiskValue))
-                        }));
-
-                        column.Item().Element(t => ComposeTable(
-                            t,
-                            "Top Pending Receivables",
-                            new[] { "Customer", "Balance Due" },
-                            report.TopPendingReceivables.Select(x => new[]
-                            {
-                                $"{x.CustomerName} ({x.CustomerId})",
-                                FormatMoney(x.BalanceDue)
-                            }).ToList(),
-                            new[] { 3f, 2f },
-                            new[] { false, true }));
+                        text.DefaultTextStyle(x => x.FontSize(9).FontColor(SecondaryTextColor));
+                        text.Span($"Generated {PdfFormatService.FormatDateTimeUtc(meta.GeneratedAtUtc)} | Page ");
+                        text.CurrentPageNumber();
+                        text.Span(" of ");
+                        text.TotalPages();
                     });
                 });
-                page.Footer().Element(ComposeFooter);
             });
         });
 
-        return Task.FromResult(document.GeneratePdf());
+        return document.GeneratePdf();
     }
 
-    private static void ComposeMetaHeader(IContainer container, ReportMetaDto meta)
+    private static void ComposeHeader(IContainer container, ReportMetaDto meta)
     {
         container.Column(column =>
         {
-            column.Spacing(4);
-            column.Item().Text(meta.ReportTitle).SemiBold().FontSize(16).FontColor(Colors.Blue.Darken2);
-            column.Item().Text($"Generated (UTC): {FormatDateTime(meta.GeneratedAtUtc)}");
-            column.Item().Text(
-                $"Range (UTC): {FormatDateTime(meta.DateRange.FromUtc)} - {FormatDateTime(meta.DateRange.ToUtc)}");
-            column.Item().Text(
-                $"Group By: {meta.GroupBy} | Include Cancelled: {meta.IncludeCancelled} | Customer: {meta.CustomerId ?? "All"} | Vendor: {(meta.VendorId?.ToString(InvariantCulture) ?? "All")}");
-            column.Item().Text($"Note: {meta.CalculationNote}").Italic();
-            column.Item().PaddingTop(6).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+            column.Spacing(8);
+            column.Item().Text(meta.ReportTitle).SemiBold().FontSize(22).FontColor(PrimaryColor);
+            column.Item().Text($"Generated: {PdfFormatService.FormatDateTimeUtc(meta.GeneratedAtUtc)}").FontSize(11).FontColor(SecondaryTextColor);
+            column.Item().Text($"Range: {PdfFormatService.FormatDateTimeUtc(meta.DateRange.FromUtc)} - {PdfFormatService.FormatDateTimeUtc(meta.DateRange.ToUtc)}").FontSize(11).FontColor(SecondaryTextColor);
+
+            column.Item().Row(row =>
+            {
+                row.Spacing(8);
+                ComposeChip(row.RelativeItem(), $"Group By: {meta.GroupBy}");
+                ComposeChip(row.RelativeItem(), $"Cancelled: {meta.IncludeCancelled}");
+                ComposeChip(row.RelativeItem(), $"Customer: {PdfFormatService.ValueOrDash(meta.CustomerId)}");
+                ComposeChip(row.RelativeItem(), $"Vendor: {(meta.VendorId?.ToString() ?? "-")}");
+            });
+
+            ComposeInfoNote(column.Item(), meta.CalculationNote);
+            column.Item().PaddingTop(8).LineHorizontal(1).LineColor(BorderColor);
         });
     }
 
-    private static void ComposeKeyValueGrid(IContainer container, IReadOnlyList<(string Label, string Value)> items)
+    private static void ComposeChip(IContainer container, string text)
     {
-        container.Table(table =>
+        container.PaddingVertical(4)
+            .PaddingHorizontal(8)
+            .Border(1)
+            .BorderColor(BorderColor)
+            .Background(MutedBackgroundColor)
+            .Text(text)
+            .FontSize(9)
+            .FontColor(SecondaryTextColor);
+    }
+
+    private static void ComposeInfoNote(IContainer container, string note)
+    {
+        if (string.IsNullOrWhiteSpace(note))
         {
-            table.ColumnsDefinition(columns =>
-            {
-                columns.RelativeColumn();
-                columns.RelativeColumn();
-            });
+            return;
+        }
 
-            foreach (var item in items)
-            {
-                table.Cell().Element(CellStyle).Text($"{item.Label}: {item.Value}");
-            }
+        container.Padding(8)
+            .Background(MutedBackgroundColor)
+            .Border(1)
+            .BorderColor(BorderColor)
+            .Text($"Note: {note}")
+            .Italic()
+            .FontSize(11)
+            .FontColor(SecondaryTextColor);
+    }
 
-            if (items.Count % 2 != 0)
+    private static void ComposeKpiCardGrid(IContainer container, IReadOnlyList<(string Label, string Value, string? Helper)> items)
+    {
+        container.Row(row =>
+        {
+            for (var i = 0; i < items.Count; i++)
             {
-                table.Cell().Element(CellStyle).Text(string.Empty);
+                row.RelativeItem().Element(c => ComposeKpiCard(c, items[i]));
+                if (i < items.Count - 1)
+                {
+                    row.ConstantItem(8);
+                }
             }
         });
+    }
 
-        static IContainer CellStyle(IContainer cell) =>
-            cell.Padding(8).Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten5);
+    private static void ComposeKpiCard(IContainer container, (string Label, string Value, string? Helper) item)
+    {
+        container.Padding(12)
+            .Background(MutedBackgroundColor)
+            .Border(1)
+            .BorderColor(BorderColor)
+            .Column(column =>
+            {
+                column.Spacing(4);
+                column.Item().Text(item.Label).FontSize(9).FontColor(SecondaryTextColor);
+                column.Item().Text(item.Value).SemiBold().FontSize(16);
+                if (!string.IsNullOrWhiteSpace(item.Helper))
+                {
+                    column.Item().Text(item.Helper).FontSize(9).FontColor(SecondaryTextColor);
+                }
+            });
     }
 
     private static void ComposeTable(
@@ -536,21 +399,27 @@ public class ReportPdfService : IReportPdfService
         string title,
         IReadOnlyList<string> headers,
         IReadOnlyList<string[]> rows,
-        IReadOnlyList<float> columnWeights,
+        IReadOnlyList<float> columnWidths,
         IReadOnlyList<bool> alignRight)
     {
         container.Column(column =>
         {
-            column.Spacing(6);
-            column.Item().Text(title).SemiBold().FontSize(12);
+            column.Spacing(8);
+            column.Item().PaddingBottom(8).Text(title).SemiBold().FontSize(13).FontColor(PrimaryColor);
+
+            if (rows.Count == 0)
+            {
+                column.Item().Padding(8).Text("No data available").FontColor(SecondaryTextColor);
+                return;
+            }
 
             column.Item().Table(table =>
             {
-                table.ColumnsDefinition(columns =>
+                table.ColumnsDefinition(cols =>
                 {
-                    foreach (var weight in columnWeights)
+                    foreach (var width in columnWidths)
                     {
-                        columns.RelativeColumn(weight);
+                        cols.RelativeColumn(width);
                     }
                 });
 
@@ -558,56 +427,38 @@ public class ReportPdfService : IReportPdfService
                 {
                     for (var i = 0; i < headers.Count; i++)
                     {
-                        var cell = header.Cell().Element(HeaderCellStyle);
-                        if (alignRight[i])
-                        {
-                            cell.AlignRight().Text(headers[i]).SemiBold();
-                        }
-                        else
-                        {
-                            cell.Text(headers[i]).SemiBold();
-                        }
+                        var cell = header.Cell().Element(ComposeTableHeaderCell);
+                        if (alignRight[i]) cell.AlignRight().Text(headers[i]).SemiBold();
+                        else cell.Text(headers[i]).SemiBold();
                     }
                 });
 
-                foreach (var row in rows)
+                for (var r = 0; r < rows.Count; r++)
                 {
-                    for (var i = 0; i < row.Length; i++)
+                    var row = rows[r];
+                    var isZebra = r % 2 == 1;
+
+                    for (var c = 0; c < row.Length; c++)
                     {
-                        var cell = table.Cell().Element(BodyCellStyle);
-                        if (alignRight[i])
-                        {
-                            cell.AlignRight().Text(row[i]);
-                        }
-                        else
-                        {
-                            cell.Text(row[i]);
-                        }
+                        var cell = table.Cell().Element(x => ComposeTableBodyCell(x, isZebra));
+                        if (alignRight[c]) cell.AlignRight().Text(row[c]);
+                        else cell.Text(row[c]);
                     }
                 }
             });
         });
-
-        static IContainer HeaderCellStyle(IContainer c) =>
-            c.Padding(6).Background(Colors.Grey.Lighten3).BorderBottom(1).BorderColor(Colors.Grey.Lighten1);
-
-        static IContainer BodyCellStyle(IContainer c) =>
-            c.PaddingVertical(5).PaddingHorizontal(6).BorderBottom(1).BorderColor(Colors.Grey.Lighten3);
     }
 
-    private static void ComposeFooter(IContainer container)
-    {
-        container.AlignCenter().Text(text =>
-        {
-            text.Span("Vehicle Parts Management | Page ");
-            text.CurrentPageNumber();
-            text.Span(" of ");
-            text.TotalPages();
-        });
-    }
+    private static IContainer ComposeTableHeaderCell(IContainer container) =>
+        container.Padding(8)
+            .Background(HeaderBackgroundColor)
+            .BorderBottom(1)
+            .BorderColor(BorderColor);
 
-    private static string FormatMoney(decimal value) => value.ToString("0.00", InvariantCulture);
-
-    private static string FormatDateTime(DateTime value) =>
-        value.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss", InvariantCulture);
+    private static IContainer ComposeTableBodyCell(IContainer container, bool zebra) =>
+        container.PaddingVertical(8)
+            .PaddingHorizontal(8)
+            .Background(zebra ? ZebraBackgroundColor : Colors.White)
+            .BorderBottom(1)
+            .BorderColor(BorderColor);
 }
