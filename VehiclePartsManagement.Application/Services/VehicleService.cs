@@ -226,6 +226,22 @@ public class VehicleService(
 
 
     // ────────────────────────────────────────────────────────────────
+    // Vehicles by Customer ID
+    // ────────────────────────────────────────────────────────────────
+
+    public async Task<ApiResponse<List<VehicleListItemDto>>> GetByCustomerIdAsync(string customerId)
+    {
+        var (items, _) = await vehicleRepository.GetPagedAsync(1, 1000, customerId, null);
+
+        var data = items.Select(MapListItem).ToList();
+
+        return ApiResponse<List<VehicleListItemDto>>.SuccessResponse(
+            data,
+            "Customer vehicles retrieved successfully.");
+    }
+
+
+    // ────────────────────────────────────────────────────────────────
     // Private Helpers
     // ────────────────────────────────────────────────────────────────
 
