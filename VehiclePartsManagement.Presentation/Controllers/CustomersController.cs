@@ -11,7 +11,7 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 [ApiController]
 [Route("api/customers")]
 [Authorize(Roles = "Admin,Staff")]
-public class CustomersController(IUserService userService) : ControllerBase
+public class CustomersController(IUserService userService, IVehicleService vehicleService) : ControllerBase
 {
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id)
@@ -20,6 +20,14 @@ public class CustomersController(IUserService userService) : ControllerBase
         return result.Success
             ? Ok(result)
             : NotFound(ApiResponse<CustomerDetailsDto>.FailureResponse(result.Message, result.Errors));
+    }
+
+
+    [HttpGet("{id}/vehicle")]
+    public async Task<IActionResult> GetVehicles(string id)
+    {
+        var result = await vehicleService.GetByCustomerIdAsync(id);
+        return result.Success ? Ok(result) : BadRequest(result);
     }
 
 
