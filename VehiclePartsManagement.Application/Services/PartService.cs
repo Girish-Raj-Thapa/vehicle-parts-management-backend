@@ -2,13 +2,16 @@ using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Application.DTOs.Inventory;
 using Microsoft.EntityFrameworkCore;
 using VehiclePartsManagement.Application.DTOs.Part;
+using VehiclePartsManagement.Application.Interfaces;
 using VehiclePartsManagement.Application.Interfaces.Repositories;
 using VehiclePartsManagement.Application.Interfaces.Services;
 using VehiclePartsManagement.Domain.Entities;
 
 namespace VehiclePartsManagement.Application.Services;
 
-public class PartService(IPartRepository partRepository) : IPartService
+public class PartService(
+    IPartRepository partRepository,
+    IImageStorageService imageStorageService) : IPartService
 {
     public async Task<ApiResponse<IEnumerable<LowStockPartDto>>> GetLowStockPartsAsync()
     {
@@ -195,6 +198,122 @@ public class PartService(IPartRepository partRepository) : IPartService
         return ApiResponse<List<PartListItemDto>>.SuccessResponse(dtos, "Related parts retrieved successfully.");
     }
 
+    public async Task<ApiResponse<PartImageDto>> UploadImageAsync(
+        int partId,
+        Stream fileStream,
+        string fileName,
+        string contentType,
+        long length,
+        bool isPrimary,
+        int displayOrder)
+    {
+        var part = await partRepository.GetByIdWithDetailsAsync(partId);
+        if (part is null)
+            return ApiResponse<PartImageDto>.FailureResponse("Part not found.");
+
+        // If the new image is primary, mark other images of this part as not primary
+        if (isPrimary)
+        {
+            foreach (var img in part.PartImages)
+            {
+                img.IsPrimary = false;
+            }
+        }
+        else if (part.PartImages.Count == 0)
+        {
+            // First image is primary by default if not specified otherwise
+            isPrimary = true;
+        }
+
+        string imagePath;
+        try
+        {
+            imagePath = await imageStorageService.SaveImageAsync(
+                fileStream,
+                fileName,
+                contentType,
+                length,
+                "parts");
+        }
+        catch (ArgumentException ex)
+        {
+            return ApiResponse<PartImageDto>.FailureResponse(ex.Message);
+        }
+
+        var partImage = new PartImage
+        {
+            PartId = partId,
+            ImagePath = imagePath,
+            IsPrimary = isPrimary,
+            DisplayOrder = displayOrder,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        part.PartImages.Add(partImage);
+        partRepository.Update(part);
+        await partRepository.SaveChangesAsync();
+
+        var dto = new PartImageDto
+        {
+            PartImageId = partImage.PartImageId,
+            ImagePath = partImage.ImagePath,
+            IsPrimary = partImage.IsPrimary,
+            DisplayOrder = partImage.DisplayOrder
+        };
+
+        return ApiResponse<PartImageDto>.SuccessResponse(dto, "Image uploaded successfully.");
+    }
+
+    public async Task<ApiResponse<bool>> DeleteImageAsync(int partId, int imageId)
+    {
+        var part = await partRepository.GetByIdWithDetailsAsync(partId);
+        if (part is null)
+            return ApiResponse<bool>.FailureResponse("Part not found.");
+
+        var partImage = part.PartImages.FirstOrDefault(pi => pi.PartImageId == imageId);
+        if (partImage is null)
+            return ApiResponse<bool>.FailureResponse("Image not found on this part.");
+
+        // Delete from storage
+        await imageStorageService.DeleteImageAsync(partImage.ImagePath);
+
+        // Delete from database
+        part.PartImages.Remove(partImage);
+        partRepository.Update(part);
+        await partRepository.SaveChangesAsync();
+
+        return ApiResponse<bool>.SuccessResponse(true, "Image deleted successfully.");
+    }
+
+    public async Task<ApiResponse<PartImageDto>> SetPrimaryImageAsync(int partId, int imageId)
+    {
+        var part = await partRepository.GetByIdWithDetailsAsync(partId);
+        if (part is null)
+            return ApiResponse<PartImageDto>.FailureResponse("Part not found.");
+
+        var targetImage = part.PartImages.FirstOrDefault(pi => pi.PartImageId == imageId);
+        if (targetImage is null)
+            return ApiResponse<PartImageDto>.FailureResponse("Image not found on this part.");
+
+        foreach (var img in part.PartImages)
+        {
+            img.IsPrimary = (img.PartImageId == imageId);
+        }
+
+        partRepository.Update(part);
+        await partRepository.SaveChangesAsync();
+
+        var dto = new PartImageDto
+        {
+            PartImageId = targetImage.PartImageId,
+            ImagePath = targetImage.ImagePath,
+            IsPrimary = targetImage.IsPrimary,
+            DisplayOrder = targetImage.DisplayOrder
+        };
+
+        return ApiResponse<PartImageDto>.SuccessResponse(dto, "Primary image set successfully.");
+    }
+
     // --- Private Mapping Helpers ---
 
     private static PartResponseDto MapToResponse(Part part) => new()
@@ -217,7 +336,14 @@ public class PartService(IPartRepository partRepository) : IPartService
             BrandName = pc.Model?.Brand?.BrandName ?? string.Empty,
             ModelId = pc.VehicleModelId,
             ModelName = pc.Model?.ModelName ?? string.Empty
-        }).ToList() ?? new List<PartCompatibleVehicleDto>()
+        }).ToList() ?? new List<PartCompatibleVehicleDto>(),
+        Images = part.PartImages?.Select(pi => new PartImageDto
+        {
+            PartImageId = pi.PartImageId,
+            ImagePath = pi.ImagePath,
+            IsPrimary = pi.IsPrimary,
+            DisplayOrder = pi.DisplayOrder
+        }).OrderBy(pi => pi.DisplayOrder).ToList() ?? new List<PartImageDto>()
     };
 
     private static PartListItemDto MapToListItem(Part part) => new()
@@ -234,6 +360,8 @@ public class PartService(IPartRepository partRepository) : IPartService
         CompatibleModels = part.PartCompatibilities?
             .Where(pc => pc.Model != null && pc.Model.Brand != null)
             .Select(pc => $"{pc.Model.Brand.BrandName} {pc.Model.ModelName}")
-            .ToList() ?? new List<string>()
+            .ToList() ?? new List<string>(),
+        PrimaryImageUrl = part.PartImages?.FirstOrDefault(pi => pi.IsPrimary)?.ImagePath 
+            ?? part.PartImages?.OrderBy(pi => pi.DisplayOrder).FirstOrDefault()?.ImagePath
     };
 }

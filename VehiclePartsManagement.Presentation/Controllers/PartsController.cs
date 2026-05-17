@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using VehiclePartsManagement.Application.DTOs.Part;
 using VehiclePartsManagement.Application.Interfaces.Services;
@@ -95,5 +96,52 @@ public class PartsController(IPartService partService) : ControllerBase
     {
         var result = await partService.DeleteAsync(partId);
         return result.Success ? Ok(result) : NotFound(result);
+    }
+
+    /// <summary>
+    /// Uploads an image for a specific part. Admin and Staff can upload images.
+    /// </summary>
+    [HttpPost("{partId:int}/images")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadImage(
+        int partId,
+        IFormFile file,
+        [FromForm] bool isPrimary = false,
+        [FromForm] int displayOrder = 0)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest("No file was provided.");
+
+        using var stream = file.OpenReadStream();
+        var result = await partService.UploadImageAsync(
+            partId,
+            stream,
+            file.FileName,
+            file.ContentType,
+            file.Length,
+            isPrimary,
+            displayOrder);
+
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    /// <summary>
+    /// Deletes an image from a part. Admin and Staff can delete images.
+    /// </summary>
+    [HttpDelete("{partId:int}/images/{imageId:int}")]
+    public async Task<IActionResult> DeleteImage(int partId, int imageId)
+    {
+        var result = await partService.DeleteImageAsync(partId, imageId);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    /// <summary>
+    /// Sets an image as primary for a part. Admin and Staff can set primary images.
+    /// </summary>
+    [HttpPut("{partId:int}/images/{imageId:int}/primary")]
+    public async Task<IActionResult> SetPrimaryImage(int partId, int imageId)
+    {
+        var result = await partService.SetPrimaryImageAsync(partId, imageId);
+        return result.Success ? Ok(result) : BadRequest(result);
     }
 }
