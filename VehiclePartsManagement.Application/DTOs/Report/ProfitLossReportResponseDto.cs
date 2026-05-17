@@ -1,3 +1,5 @@
+using VehiclePartsManagement.Application.Common;
+
 namespace VehiclePartsManagement.Application.DTOs.Report;
 
 public class ProfitLossReportResponseDto
@@ -10,4 +12,5 @@ public class ProfitLossReportResponseDto
     public decimal EstimatedGrossProfit { get; set; }
     public decimal EstimatedNetProfit { get; set; }
     public List<ProfitLossPeriodItemDto> Collections { get; set; } = [];
+    public PaginationMeta CollectionsPagination { get; set; } = new();
 }

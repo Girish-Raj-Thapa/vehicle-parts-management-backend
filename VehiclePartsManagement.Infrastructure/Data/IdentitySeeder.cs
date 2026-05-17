@@ -32,8 +32,19 @@ public static class IdentitySeeder
         {
             new { Email = "admin@gmail.com", FullName = "Admin User", Role = "Admin" },
             new { Email = "staff@gmail.com", FullName = "Staff User", Role = "Staff" },
-            new { Email = "customer@gmail.com", FullName = "Customer User", Role = "Customer" }
+            new { Email = "awantikapokharel46@gmail.com", FullName = "Awantika Customer", Role = "Customer" }
         };
+
+        // Update existing test user email if it hasn't been updated yet
+        var oldUser = await userManager.FindByEmailAsync("customer@gmail.com");
+        if (oldUser != null)
+        {
+            oldUser.Email = "awantikapokharel46@gmail.com";
+            oldUser.UserName = "awantikapokharel46@gmail.com";
+            oldUser.NormalizedEmail = "AWANTIKAPOKHAREL46@GMAIL.COM";
+            oldUser.NormalizedUserName = "AWANTIKAPOKHAREL46@GMAIL.COM";
+            await userManager.UpdateAsync(oldUser);
+        }
 
         foreach (var seedUser in usersToSeed)
         {

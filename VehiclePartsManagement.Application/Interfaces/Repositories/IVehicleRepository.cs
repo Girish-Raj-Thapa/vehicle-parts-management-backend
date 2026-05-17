@@ -5,6 +5,15 @@ namespace VehiclePartsManagement.Application.Interfaces.Repositories;
 public interface IVehicleRepository : IRepositoryBase<Vehicle>
 {
     /// <summary>
+    /// Returns a vehicle by ID.
+    /// </summary>
+    Task<Vehicle?> GetByIdAsync(int vehicleId);
+
+    /// <summary>
+    /// Checks ownership of a vehicle by application user.
+    /// </summary>
+    Task<bool> IsOwnedByUserAsync(int vehicleId, string applicationUserId);
+    /// <summary>
     /// Returns paged vehicles with optional owner-scope and search filtering.
     /// </summary>
     Task<(List<Vehicle> Items, int TotalItems)> GetPagedAsync(

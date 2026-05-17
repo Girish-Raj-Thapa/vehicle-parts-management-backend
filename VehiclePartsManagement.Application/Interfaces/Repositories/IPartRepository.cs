@@ -4,7 +4,9 @@ namespace VehiclePartsManagement.Application.Interfaces.Repositories;
 
 public interface IPartRepository : IRepositoryBase<Part>
 {
+    Task<IEnumerable<Part>> GetLowStockPartsAsync();
     Task<Part?> GetByIdAsync(int partId);
+    Task<List<Part>> GetByIdsAsync(List<int> partIds);
     Task<Part?> GetByIdWithDetailsAsync(int partId);
     IQueryable<Part> GetPartsQuery(bool trackChanges = false);
     IQueryable<Part> SearchParts(IQueryable<Part> query, string searchTerm);

@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VehiclePartsManagement.Application.Common;
@@ -44,6 +46,136 @@ public class CustomersController(IUserService userService, IVehicleService vehic
         var result = await userService.SearchCustomersAsync(dto);
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+
+    [HttpGet("me/purchases")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyPurchases(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? paymentStatus = null,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await userService.GetMyPurchaseHistoryAsync(
+            userId,
+            page,
+            pageSize,
+            paymentStatus,
+            fromDate,
+            toDate);
+
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+
+    [HttpGet("me/purchases/{saleId:int}")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyPurchaseDetail(int saleId)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await userService.GetMyPurchaseDetailAsync(userId, saleId);
+        return result.Success ? Ok(result) : NotFound(result);
+    }
+
+
+    [HttpGet("me/service-records")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyServiceRecords(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] int? vehicleId = null)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await userService.GetMyServiceRecordsAsync(userId, page, pageSize, vehicleId);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+
+    [HttpGet("me/service-records/{serviceRecordId:int}")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyServiceRecordDetail(int serviceRecordId)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await userService.GetMyServiceRecordDetailAsync(userId, serviceRecordId);
+        return result.Success ? Ok(result) : NotFound(result);
+    }
+
+
+    [HttpGet("me/payments")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyPayments(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await userService.GetMyPaymentHistoryAsync(userId, page, pageSize);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+
+    [HttpGet("me/appointments")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyAppointments(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? status = null)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await userService.GetMyAppointmentHistoryAsync(userId, page, pageSize, status);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+
+    [HttpGet("me/history-summary")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyHistorySummary()
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await userService.GetMyHistorySummaryAsync(userId);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+
+    private string? GetCurrentUserId() =>
+        User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+        ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 
     [HttpGet("{id}/loyalty")]
     public async Task<IActionResult> GetLoyalty(string id)

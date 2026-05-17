@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using VehiclePartsManagement.Application.Config;
 using VehiclePartsManagement.Application.Interfaces;
 using VehiclePartsManagement.Application.Interfaces.Repositories;
 using VehiclePartsManagement.Application.Interfaces.Services;
@@ -13,7 +14,6 @@ using VehiclePartsManagement.Domain.Entities;
 using VehiclePartsManagement.Infrastructure.Config;
 using VehiclePartsManagement.Infrastructure.Data;
 using VehiclePartsManagement.Infrastructure.Repositories;
-using VehiclePartsManagement.Infrastructure.Services;
 
 namespace VehiclePartsManagement.Infrastructure;
 
@@ -43,9 +43,18 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<VehiclePartsManagement.Application.Config.EmailOptions>()
+            .Bind(configuration.GetSection(VehiclePartsManagement.Application.Config.EmailOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<KhaltiOptions>()
+            .Bind(configuration.GetSection(KhaltiOptions.SectionName));
+
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IImageStorageService, ImageStorageService>();
+        services.AddScoped<IUserService, UserService>();
         services.AddScoped<IPartService, PartService>();
         services.AddScoped<IPartCategoryService, PartCategoryService>();
         services.AddScoped<IVehicleService, VehicleService>();
@@ -53,12 +62,13 @@ public static class DependencyInjection
         services.AddScoped<IVendorService, VendorService>();
         services.AddScoped<IPurchaseService, PurchaseService>();
         services.AddScoped<ISaleService, SaleService>();
-        services.AddScoped<IPaymentService, PaymentService>();
+        services.AddHttpClient<IPaymentService, PaymentService>();
         services.AddScoped<IServiceAppointmentService, ServiceAppointmentService>();
         services.AddScoped<IServiceRecordService, ServiceRecordService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IPartRequestService, PartRequestService>();
         services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<IReportPdfService, ReportPdfService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
 
@@ -70,6 +80,7 @@ public static class DependencyInjection
         services.AddScoped<IPurchaseRepository, PurchaseRepository>();
         services.AddScoped<ISaleRepository, SaleRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IStockMovementRepository, StockMovementRepository>();
         services.AddScoped<IServiceAppointmentRepository, ServiceAppointmentRepository>();
         services.AddScoped<IServiceRecordRepository, ServiceRecordRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();

@@ -1,5 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using VehiclePartsManagement.Application.Common;
+using VehiclePartsManagement.Application.DTOs.Inventory;
+using Microsoft.EntityFrameworkCore;
 using VehiclePartsManagement.Application.DTOs.Part;
 using VehiclePartsManagement.Application.Interfaces.Repositories;
 using VehiclePartsManagement.Application.Interfaces.Services;
@@ -9,6 +10,22 @@ namespace VehiclePartsManagement.Application.Services;
 
 public class PartService(IPartRepository partRepository) : IPartService
 {
+    public async Task<ApiResponse<IEnumerable<LowStockPartDto>>> GetLowStockPartsAsync()
+    {
+        var parts = await partRepository.GetLowStockPartsAsync();
+        var data = parts.Select(p => new LowStockPartDto
+        {
+            PartId = p.PartId,
+            Sku = p.Sku,
+            PartName = p.PartName,
+            CategoryName = p.Category?.CategoryName ?? string.Empty,
+            CurrentStock = p.CurrentStock,
+            LowStockThreshold = p.LowStockThreshold,
+            Status = "Low Stock"
+        });
+
+        return ApiResponse<IEnumerable<LowStockPartDto>>.SuccessResponse(data, "Low stock parts retrieved successfully");
+    }
     public async Task<PagedResponse<List<PartListItemDto>>> GetAllAsync(PartQueryDto query)
     {
         var page = query.Page <= 0 ? 1 : query.Page;
@@ -136,7 +153,10 @@ public class PartService(IPartRepository partRepository) : IPartService
         if (part is null)
             return ApiResponse<bool>.FailureResponse("Part not found.");
 
-        // Soft delete per spec
+        if (!part.IsActive)
+            return ApiResponse<bool>.FailureResponse("Part is already deleted.");
+
+        // Soft delete per spec: one-way deactivation through DELETE.
         part.IsActive = false;
         partRepository.Update(part);
         await partRepository.SaveChangesAsync();
