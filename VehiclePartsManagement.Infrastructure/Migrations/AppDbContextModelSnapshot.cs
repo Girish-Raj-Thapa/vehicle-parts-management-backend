@@ -245,6 +245,48 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.AppointmentSlot", b =>
+                {
+                    b.Property<int>("AppointmentSlotId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AppointmentSlotId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("MaxCapacity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("SlotDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SlotTime")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("AppointmentSlotId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("SlotDate", "SlotTime")
+                        .IsUnique();
+
+                    b.ToTable("AppointmentSlot", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AppointmentSlot_MaxCapacity_Positive", "\"MaxCapacity\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Part", b =>
                 {
                     b.Property<int>("PartId")

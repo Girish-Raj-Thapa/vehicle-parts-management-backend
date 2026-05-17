@@ -20,6 +20,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SaleItem> SaleItems => Set<SaleItem>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<ServiceAppointment> ServiceAppointments => Set<ServiceAppointment>();
+    public DbSet<AppointmentSlot> AppointmentSlots => Set<AppointmentSlot>();
     public DbSet<ServiceRecord> ServiceRecords => Set<ServiceRecord>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<PartRequest> PartRequests => Set<PartRequest>();
