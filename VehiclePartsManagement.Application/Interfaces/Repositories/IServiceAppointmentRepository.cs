@@ -12,7 +12,8 @@ public interface IServiceAppointmentRepository : IRepositoryBase<ServiceAppointm
         int page,
         int pageSize,
         string? applicationUserId,
-        ServiceAppointmentStatus? status);
+        ServiceAppointmentStatus? status,
+        DateOnly? appointmentDate = null);
 
     /// <summary>
     /// Returns a single appointment with user and vehicle details.
@@ -22,6 +23,11 @@ public interface IServiceAppointmentRepository : IRepositoryBase<ServiceAppointm
     /// Returns a single appointment for a specific user scope.
     /// </summary>
     Task<ServiceAppointment?> GetByIdForUserAsync(int appointmentId, string applicationUserId);
+
+    /// <summary>
+    /// Returns a tracked appointment entity for update operations.
+    /// </summary>
+    Task<ServiceAppointment?> GetByIdForUpdateAsync(int appointmentId);
     /// <summary>
     /// Checks whether the vehicle belongs to the provided user.
     /// </summary>

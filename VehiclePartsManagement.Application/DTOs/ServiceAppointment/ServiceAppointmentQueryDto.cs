@@ -12,6 +12,8 @@ public class ServiceAppointmentQueryDto
     [MaxLength(50)]
     public string? Status { get; set; }
 
+    public DateOnly? Date { get; set; }
+
     [Range(1, int.MaxValue)]
     public int Page { get; set; } = 1;
 

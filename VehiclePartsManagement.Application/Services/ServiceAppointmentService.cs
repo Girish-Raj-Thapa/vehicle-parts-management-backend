@@ -9,6 +9,14 @@ namespace VehiclePartsManagement.Application.Services;
 
 public class ServiceAppointmentService(IServiceAppointmentRepository serviceAppointmentRepository) : IServiceAppointmentService
 {
+    private static readonly ServiceAppointmentStatus[] AllowedStaffStatuses =
+    [
+        ServiceAppointmentStatus.Pending,
+        ServiceAppointmentStatus.Confirmed,
+        ServiceAppointmentStatus.Completed,
+        ServiceAppointmentStatus.Cancelled
+    ];
+
     /// <summary>
     /// Creates a new service appointment under the provided customer scope.
     /// </summary>
@@ -106,7 +114,12 @@ public class ServiceAppointmentService(IServiceAppointmentRepository serviceAppo
         }
 
         var scopedUserId = query.Mine ? applicationUserId : null;
-        var (items, totalItems) = await serviceAppointmentRepository.GetPagedAsync(page, pageSize, scopedUserId, status);
+        var (items, totalItems) = await serviceAppointmentRepository.GetPagedAsync(
+            page,
+            pageSize,
+            scopedUserId,
+            status,
+            query.Date);
 
         var data = items.Select(MapListItem).ToList();
 
@@ -142,6 +155,55 @@ public class ServiceAppointmentService(IServiceAppointmentRepository serviceAppo
         return ApiResponse<ServiceAppointmentDetailDto>.SuccessResponse(
             MapDetail(appointment),
             "Appointment retrieved successfully");
+    }
+
+
+    /// <summary>
+    /// Updates appointment status and note for staff/admin appointment management.
+    /// </summary>
+    public async Task<ApiResponse<ServiceAppointmentUpdateResponseDto>> UpdateAsync(
+        int appointmentId,
+        UpdateServiceAppointmentDto dto)
+    {
+        if (!Enum.TryParse<ServiceAppointmentStatus>(dto.AppointmentStatus, true, out var newStatus))
+        {
+            return ApiResponse<ServiceAppointmentUpdateResponseDto>.FailureResponse(
+                "Appointment status is invalid.",
+                new Dictionary<string, List<string>>
+                {
+                    { "appointmentStatus", ["Appointment status is invalid."] }
+                });
+        }
+
+        if (!AllowedStaffStatuses.Contains(newStatus))
+        {
+            return ApiResponse<ServiceAppointmentUpdateResponseDto>.FailureResponse(
+                "Appointment status is not allowed in this update flow.",
+                new Dictionary<string, List<string>>
+                {
+                    { "appointmentStatus", ["Appointment status is not allowed in this update flow."] }
+                });
+        }
+
+        var appointment = await serviceAppointmentRepository.GetByIdForUpdateAsync(appointmentId);
+        if (appointment is null)
+        {
+            return ApiResponse<ServiceAppointmentUpdateResponseDto>.FailureResponse("Appointment not found.");
+        }
+
+        appointment.AppointmentStatus = newStatus;
+        appointment.AppointmentNote = dto.AppointmentNote.Trim();
+
+        serviceAppointmentRepository.Update(appointment);
+        await serviceAppointmentRepository.SaveChangesAsync();
+
+        return ApiResponse<ServiceAppointmentUpdateResponseDto>.SuccessResponse(
+            new ServiceAppointmentUpdateResponseDto
+            {
+                AppointmentId = appointment.ServiceAppointmentId,
+                AppointmentStatus = appointment.AppointmentStatus.ToString()
+            },
+            "Appointment updated successfully");
     }
 
 

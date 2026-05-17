@@ -16,4 +16,8 @@ public interface IServiceAppointmentService
     Task<ApiResponse<ServiceAppointmentDetailDto>> GetByIdAsync(
         int appointmentId,
         string? applicationUserId);
+
+    Task<ApiResponse<ServiceAppointmentUpdateResponseDto>> UpdateAsync(
+        int appointmentId,
+        UpdateServiceAppointmentDto dto);
 }

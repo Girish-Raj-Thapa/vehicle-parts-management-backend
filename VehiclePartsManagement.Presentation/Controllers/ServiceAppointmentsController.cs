@@ -69,6 +69,24 @@ public class ServiceAppointmentsController(IServiceAppointmentService serviceApp
         return result.Success ? Ok(result) : NotFound(result);
     }
 
+    /// <summary>
+    /// Updates appointment status and note for staff/admin management flow.
+    /// </summary>
+    [HttpPut("{appointmentId:int}")]
+    [Authorize(Roles = "Admin,Staff")]
+    public async Task<IActionResult> Update(int appointmentId, [FromBody] UpdateServiceAppointmentDto dto)
+    {
+        var result = await serviceAppointmentService.UpdateAsync(appointmentId, dto);
+        if (result.Success)
+        {
+            return Ok(result);
+        }
+
+        return result.Message.Contains("not found", StringComparison.OrdinalIgnoreCase)
+            ? NotFound(result)
+            : BadRequest(result);
+    }
+
 
     private string? GetCurrentUserId() =>
         User.FindFirstValue(JwtRegisteredClaimNames.Sub)

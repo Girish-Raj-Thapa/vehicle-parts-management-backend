@@ -16,7 +16,8 @@ public class ServiceAppointmentRepository(AppDbContext context)
         int page,
         int pageSize,
         string? applicationUserId,
-        ServiceAppointmentStatus? status)
+        ServiceAppointmentStatus? status,
+        DateOnly? appointmentDate = null)
     {
         var query = Context.ServiceAppointments
             .AsNoTracking()
@@ -34,6 +35,13 @@ public class ServiceAppointmentRepository(AppDbContext context)
         if (status.HasValue)
         {
             query = query.Where(sa => sa.AppointmentStatus == status.Value);
+        }
+
+        if (appointmentDate.HasValue)
+        {
+            var from = DateTime.SpecifyKind(appointmentDate.Value.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+            var to = from.AddDays(1);
+            query = query.Where(sa => sa.AppointmentDate >= from && sa.AppointmentDate < to);
         }
 
         // Count query is executed separately for pagination metadata.
@@ -80,6 +88,14 @@ public class ServiceAppointmentRepository(AppDbContext context)
             .FirstOrDefaultAsync(sa =>
                 sa.ServiceAppointmentId == appointmentId &&
                 sa.ApplicationUserId == applicationUserId);
+
+
+    /// <summary>
+    /// Retrieves tracked appointment entity for staff/admin status update flow.
+    /// </summary>
+    public Task<ServiceAppointment?> GetByIdForUpdateAsync(int appointmentId) =>
+        Context.ServiceAppointments
+            .FirstOrDefaultAsync(sa => sa.ServiceAppointmentId == appointmentId);
 
 
     /// <summary>
