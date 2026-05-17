@@ -10,10 +10,11 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 
 [ApiController]
 [Route("api/customers")]
-[Authorize(Roles = "Admin,Staff")]
+[Authorize]
 public class CustomersController(IUserService userService) : ControllerBase
 {
     [HttpGet("{id}")]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> GetById(string id)
     {
         var result = await userService.GetCustomerDetailsAsync(id);
@@ -24,6 +25,7 @@ public class CustomersController(IUserService userService) : ControllerBase
 
 
     [HttpGet("{id}/history")]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> GetHistory(string id)
     {
         var result = await userService.GetCustomerHistoryAsync(id);
@@ -33,6 +35,7 @@ public class CustomersController(IUserService userService) : ControllerBase
     }
 
     [HttpGet("search")]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> Search([FromQuery] CustomerSearchQueryDto dto)
     {
         var result = await userService.SearchCustomersAsync(dto);
@@ -170,6 +173,7 @@ public class CustomersController(IUserService userService) : ControllerBase
         ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 
     [HttpGet("{id}/loyalty")]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> GetLoyalty(string id)
     {
         var result = await userService.GetCustomerLoyaltyAsync(id);
