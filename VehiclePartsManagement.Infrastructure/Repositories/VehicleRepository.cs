@@ -174,4 +174,29 @@ public class VehicleRepository(AppDbContext context)
         Context.Vehicles
             .AsNoTracking()
             .AnyAsync(v => v.VehicleId == vehicleId && v.ApplicationUserId == applicationUserId);
+
+
+    /// <summary>
+    /// Adds vehicle images and optionally makes room for a new primary image.
+    /// </summary>
+    public async Task AddImagesAsync(int vehicleId, IEnumerable<VehicleImage> images, bool clearExistingPrimary)
+    {
+        await using var transaction = await Context.Database.BeginTransactionAsync();
+
+        if (clearExistingPrimary)
+        {
+            var existingPrimaryImages = await Context.VehicleImages
+                .Where(i => i.VehicleId == vehicleId && i.IsPrimary)
+                .ToListAsync();
+
+            foreach (var image in existingPrimaryImages)
+            {
+                image.IsPrimary = false;
+            }
+        }
+
+        Context.VehicleImages.AddRange(images);
+        await Context.SaveChangesAsync();
+        await transaction.CommitAsync();
+    }
 }
