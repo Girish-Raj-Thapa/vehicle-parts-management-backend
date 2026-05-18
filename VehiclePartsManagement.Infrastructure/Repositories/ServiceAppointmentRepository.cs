@@ -105,4 +105,18 @@ public class ServiceAppointmentRepository(AppDbContext context)
         Context.Vehicles
             .AsNoTracking()
             .AnyAsync(v => v.VehicleId == vehicleId && v.ApplicationUserId == applicationUserId);
+
+
+    /// <summary>
+    /// Counts active appointments for the same date/time slot.
+    /// </summary>
+    public Task<int> CountActiveByDateTimeAsync(DateTime appointmentDate, string appointmentTime) =>
+        Context.ServiceAppointments
+            .AsNoTracking()
+            .CountAsync(sa =>
+                sa.AppointmentDate == appointmentDate &&
+                sa.AppointmentTime == appointmentTime &&
+                (sa.AppointmentStatus == ServiceAppointmentStatus.Pending ||
+                 sa.AppointmentStatus == ServiceAppointmentStatus.Confirmed ||
+                 sa.AppointmentStatus == ServiceAppointmentStatus.InProgress));
 }

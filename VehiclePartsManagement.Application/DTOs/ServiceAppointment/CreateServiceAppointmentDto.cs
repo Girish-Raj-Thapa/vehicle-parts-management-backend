@@ -10,6 +10,8 @@ public class CreateServiceAppointmentDto
     [Required]
     public int VehicleId { get; set; }
 
+    public int? AppointmentSlotId { get; set; }
+
     [Required]
     public DateOnly AppointmentDate { get; set; }
 

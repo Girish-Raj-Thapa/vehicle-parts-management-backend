@@ -7,7 +7,9 @@ using VehiclePartsManagement.Domain.Enums;
 
 namespace VehiclePartsManagement.Application.Services;
 
-public class ServiceAppointmentService(IServiceAppointmentRepository serviceAppointmentRepository) : IServiceAppointmentService
+public class ServiceAppointmentService(
+    IServiceAppointmentRepository serviceAppointmentRepository,
+    IAppointmentSlotRepository appointmentSlotRepository) : IServiceAppointmentService
 {
     private static readonly ServiceAppointmentStatus[] AllowedStaffStatuses =
     [
@@ -34,7 +36,49 @@ public class ServiceAppointmentService(IServiceAppointmentRepository serviceAppo
                 });
         }
 
-        if (dto.AppointmentDate < DateOnly.FromDateTime(DateTime.UtcNow))
+        var selectedDate = dto.AppointmentDate;
+        var selectedTime = dto.AppointmentTime.Trim();
+
+        // When slot id is provided, slot metadata becomes the source of truth for date/time.
+        if (dto.AppointmentSlotId.HasValue)
+        {
+            var slot = await appointmentSlotRepository.GetByIdAsync(dto.AppointmentSlotId.Value);
+            if (slot is null)
+            {
+                return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
+                    "Appointment slot not found.",
+                    new Dictionary<string, List<string>>
+                    {
+                        { "appointmentSlotId", ["Appointment slot not found."] }
+                    });
+            }
+
+            if (!slot.IsActive)
+            {
+                return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
+                    "Appointment slot is inactive.",
+                    new Dictionary<string, List<string>>
+                    {
+                        { "appointmentSlotId", ["Appointment slot is inactive."] }
+                    });
+            }
+
+            selectedDate = DateOnly.FromDateTime(slot.SlotDate);
+            selectedTime = slot.SlotTime;
+
+            var activeCount = await serviceAppointmentRepository.CountActiveByDateTimeAsync(slot.SlotDate, slot.SlotTime);
+            if (activeCount >= slot.MaxCapacity)
+            {
+                return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
+                    "Appointment slot is full.",
+                    new Dictionary<string, List<string>>
+                    {
+                        { "appointmentSlotId", ["Appointment slot is full."] }
+                    });
+            }
+        }
+
+        if (selectedDate < DateOnly.FromDateTime(DateTime.UtcNow))
         {
             return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
                 "Appointment date cannot be in the past.",
@@ -44,7 +88,7 @@ public class ServiceAppointmentService(IServiceAppointmentRepository serviceAppo
                 });
         }
 
-        if (!TimeOnly.TryParse(dto.AppointmentTime, out _))
+        if (!TimeOnly.TryParse(selectedTime, out _))
         {
             return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
                 "Appointment time is invalid.",
@@ -69,9 +113,9 @@ public class ServiceAppointmentService(IServiceAppointmentRepository serviceAppo
             ApplicationUserId = applicationUserId,
             VehicleId = dto.VehicleId,
             AppointmentDate = DateTime.SpecifyKind(
-                dto.AppointmentDate.ToDateTime(TimeOnly.MinValue),
+                selectedDate.ToDateTime(TimeOnly.MinValue),
                 DateTimeKind.Utc),
-            AppointmentTime = dto.AppointmentTime.Trim(),
+            AppointmentTime = selectedTime,
             AppointmentType = appointmentType,
             AppointmentStatus = ServiceAppointmentStatus.Pending,
             AppointmentNote = dto.AppointmentNote

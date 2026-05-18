@@ -32,4 +32,9 @@ public interface IServiceAppointmentRepository : IRepositoryBase<ServiceAppointm
     /// Checks whether the vehicle belongs to the provided user.
     /// </summary>
     Task<bool> IsVehicleOwnedByUserAsync(int vehicleId, string applicationUserId);
+
+    /// <summary>
+    /// Returns active appointment count for a specific date and time slot.
+    /// </summary>
+    Task<int> CountActiveByDateTimeAsync(DateTime appointmentDate, string appointmentTime);
 }
