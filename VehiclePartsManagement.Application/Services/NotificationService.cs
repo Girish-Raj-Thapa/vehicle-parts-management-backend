@@ -66,7 +66,7 @@ public class NotificationService(
 
         if (partList.Count > 0)
         {
-            var adminEmail = "awantikapokharel46@gmail.com"; // Updated for testing
+            var adminEmail = "awantikapokharel46@gmail.com"; 
             var subject = "Alert: Low Stock Inventory Report";
             var body = new StringBuilder();
             body.AppendLine("<div style='font-family: Arial, sans-serif;'>");

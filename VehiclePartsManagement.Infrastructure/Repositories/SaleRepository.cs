@@ -85,6 +85,9 @@ public class SaleRepository(AppDbContext context)
     {
         return await Context.Sales
             .Include(s => s.CustomerUser)
+            .Include(s => s.Vehicle)
+                .ThenInclude(v => v.Model)
+                .ThenInclude(m => m.Brand)
             .Include(s => s.SaleItems)
                 .ThenInclude(si => si.Part)
             .Include(s => s.Payments)
