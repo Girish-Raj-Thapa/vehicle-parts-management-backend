@@ -52,4 +52,9 @@ public interface IVehicleRepository : IRepositoryBase<Vehicle>
     /// Checks whether the vehicle belongs to the provided user.
     /// </summary>
     Task<bool> IsVehicleOwnedByUserAsync(int vehicleId, string applicationUserId);
+
+    /// <summary>
+    /// Adds images to a vehicle and optionally clears previous primary images.
+    /// </summary>
+    Task AddImagesAsync(int vehicleId, IEnumerable<VehicleImage> images, bool clearExistingPrimary);
 }

@@ -30,4 +30,11 @@ public interface IVehicleService
         int pageSize);
 
     Task<ApiResponse<List<VehicleListItemDto>>> GetByCustomerIdAsync(string customerId);
+
+    Task<ApiResponse<VehicleImageUploadResponseDto>> AddImagesAsync(
+        int vehicleId,
+        string? applicationUserId,
+        IReadOnlyList<VehicleImageUploadFileDto> files,
+        bool makeFirstImagePrimary,
+        CancellationToken cancellationToken = default);
 }

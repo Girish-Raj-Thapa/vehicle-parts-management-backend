@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Application.DTOs.Vehicle;
@@ -74,6 +75,61 @@ public class VehiclesController(IVehicleService vehicleService) : ControllerBase
 
         var result = await vehicleService.GetByIdAsync(vehicleId, scopedUserId);
         return result.Success ? Ok(result) : NotFound(result);
+    }
+
+
+    /// <summary>
+    /// Uploads one or more images for a vehicle.
+    /// Customer access is scoped to own vehicles.
+    /// </summary>
+    [HttpPost("{vehicleId:int}/images")]
+    [Authorize(Roles = "Admin,Staff,Customer")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadImages(
+        int vehicleId,
+        [FromForm] List<IFormFile>? images,
+        [FromForm] bool makeFirstImagePrimary = false,
+        CancellationToken cancellationToken = default)
+    {
+        var scopedUserId = User.IsInRole("Customer") ? GetCurrentUserId() : null;
+        if (User.IsInRole("Customer") && string.IsNullOrWhiteSpace(scopedUserId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var openedStreams = new List<Stream>();
+        try
+        {
+            var files = (images ?? []).Select(image =>
+            {
+                var stream = image.OpenReadStream();
+                openedStreams.Add(stream);
+
+                return new VehicleImageUploadFileDto
+                {
+                    FileStream = stream,
+                    FileName = image.FileName,
+                    ContentType = image.ContentType,
+                    Length = image.Length
+                };
+            }).ToList();
+
+            var result = await vehicleService.AddImagesAsync(
+                vehicleId,
+                scopedUserId,
+                files,
+                makeFirstImagePrimary,
+                cancellationToken);
+
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+        finally
+        {
+            foreach (var stream in openedStreams)
+            {
+                await stream.DisposeAsync();
+            }
+        }
     }
 
 

@@ -10,7 +10,8 @@ namespace VehiclePartsManagement.Application.Services;
 public class VehicleService(
     IVehicleRepository vehicleRepository,
     IRepositoryBase<VehicleModel> vehicleModelRepository,
-    IRepositoryBase<VehicleBrand> vehicleBrandRepository) : IVehicleService
+    IRepositoryBase<VehicleBrand> vehicleBrandRepository,
+    IImageStorageService imageStorageService) : IVehicleService
 {
     // ────────────────────────────────────────────────────────────────
     // Register
@@ -242,6 +243,95 @@ public class VehicleService(
 
 
     // ────────────────────────────────────────────────────────────────
+    // Vehicle Images
+    // ────────────────────────────────────────────────────────────────
+
+    public async Task<ApiResponse<VehicleImageUploadResponseDto>> AddImagesAsync(
+        int vehicleId,
+        string? applicationUserId,
+        IReadOnlyList<VehicleImageUploadFileDto> files,
+        bool makeFirstImagePrimary,
+        CancellationToken cancellationToken = default)
+    {
+        if (files.Count == 0)
+        {
+            return ApiResponse<VehicleImageUploadResponseDto>.FailureResponse(
+                "At least one vehicle image is required.",
+                new Dictionary<string, List<string>>
+                {
+                    { "images", ["At least one vehicle image is required."] }
+                });
+        }
+
+        var vehicle = string.IsNullOrWhiteSpace(applicationUserId)
+            ? await vehicleRepository.GetByIdWithDetailsAsync(vehicleId)
+            : await vehicleRepository.GetByIdForUserAsync(vehicleId, applicationUserId);
+
+        if (vehicle is null)
+        {
+            return ApiResponse<VehicleImageUploadResponseDto>.FailureResponse("Vehicle not found or access denied.");
+        }
+
+        var savedPaths = new List<string>();
+        try
+        {
+            foreach (var file in files)
+            {
+                var imagePath = await imageStorageService.SaveImageAsync(
+                    file.FileStream,
+                    file.FileName,
+                    file.ContentType,
+                    file.Length,
+                    $"vehicles/{vehicleId}",
+                    cancellationToken);
+
+                savedPaths.Add(imagePath);
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            await DeleteSavedImagesAsync(savedPaths, cancellationToken);
+
+            return ApiResponse<VehicleImageUploadResponseDto>.FailureResponse(
+                ex.Message,
+                new Dictionary<string, List<string>>
+                {
+                    { "images", [ex.Message] }
+                });
+        }
+
+        var existingImageCount = vehicle.VehicleImages.Count;
+        var shouldSetPrimary = makeFirstImagePrimary || vehicle.VehicleImages.All(i => !i.IsPrimary);
+        var vehicleImages = savedPaths.Select((path, index) => new VehicleImage
+        {
+            VehicleId = vehicleId,
+            ImagePath = path,
+            IsPrimary = shouldSetPrimary && index == 0,
+            DisplayOrder = existingImageCount + index + 1,
+            CreatedAt = DateTime.UtcNow
+        }).ToList();
+
+        try
+        {
+            await vehicleRepository.AddImagesAsync(vehicleId, vehicleImages, shouldSetPrimary);
+        }
+        catch
+        {
+            await DeleteSavedImagesAsync(savedPaths, cancellationToken);
+            throw;
+        }
+
+        return ApiResponse<VehicleImageUploadResponseDto>.SuccessResponse(
+            new VehicleImageUploadResponseDto
+            {
+                VehicleId = vehicleId,
+                ImagePaths = savedPaths
+            },
+            "Vehicle images uploaded successfully.");
+    }
+
+
+    // ────────────────────────────────────────────────────────────────
     // Private Helpers
     // ────────────────────────────────────────────────────────────────
 
@@ -290,6 +380,24 @@ public class VehicleService(
         }
 
         return (model.VehicleModelId, null);
+    }
+
+
+    private async Task DeleteSavedImagesAsync(
+        IEnumerable<string> imagePaths,
+        CancellationToken cancellationToken)
+    {
+        foreach (var imagePath in imagePaths)
+        {
+            try
+            {
+                await imageStorageService.DeleteImageAsync(imagePath, cancellationToken);
+            }
+            catch
+            {
+                // Image cleanup should not hide the original upload/database failure.
+            }
+        }
     }
 
 
