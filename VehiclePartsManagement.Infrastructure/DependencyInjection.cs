@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<IVendorService, VendorService>();
         services.AddScoped<IPurchaseService, PurchaseService>();
         services.AddScoped<ISaleService, SaleService>();
+        services.AddScoped<ICartService, CartService>();
         services.AddHttpClient<IPaymentService, PaymentService>();
         services.AddScoped<IServiceAppointmentService, ServiceAppointmentService>();
         services.AddScoped<IAppointmentSlotService, AppointmentSlotService>();
@@ -82,6 +83,8 @@ public static class DependencyInjection
         services.AddScoped<ISaleRepository, SaleRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IStockMovementRepository, StockMovementRepository>();
+        services.AddScoped<ICartRepository, CartRepository>();
+        services.AddScoped<ICartItemRepository, CartItemRepository>();
         services.AddScoped<IServiceAppointmentRepository, ServiceAppointmentRepository>();
         services.AddScoped<IAppointmentSlotRepository, AppointmentSlotRepository>();
         services.AddScoped<IServiceRecordRepository, ServiceRecordRepository>();

@@ -287,6 +287,77 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Cart", b =>
+                {
+                    b.Property<int>("CartId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CartId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("CustomerApplicationUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("CartId");
+
+                    b.HasIndex("CustomerApplicationUserId")
+                        .IsUnique();
+
+                    b.ToTable("Cart", (string)null);
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.CartItem", b =>
+                {
+                    b.Property<int>("CartItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CartItemId"));
+
+                    b.Property<int>("CartId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("CartItemId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("CartId", "PartId")
+                        .IsUnique();
+
+                    b.ToTable("CartItem", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CartItem_Quantity_Positive", "\"Quantity\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Part", b =>
                 {
                     b.Property<int>("PartId")
@@ -738,9 +809,15 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                         .HasColumnType("character varying(30)");
 
                     b.Property<string>("ProcessedByApplicationUserId")
-                        .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("character varying(450)");
+
+                    b.Property<string>("SaleChannel")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Workshop");
 
                     b.Property<DateTime>("SaleDate")
                         .ValueGeneratedOnAdd()
@@ -767,7 +844,7 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                         .HasColumnType("numeric(18,2)")
                         .HasDefaultValue(0m);
 
-                    b.Property<int>("VehicleId")
+                    b.Property<int?>("VehicleId")
                         .HasColumnType("integer");
 
                     b.HasKey("SaleId");
@@ -790,6 +867,8 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                             t.HasCheckConstraint("CK_Sale_LoyaltyDiscountPercent_Valid", "\"LoyaltyDiscountPercent\" >= 0 AND \"LoyaltyDiscountPercent\" <= 100");
 
                             t.HasCheckConstraint("CK_Sale_PaymentStatus_Valid", "\"PaymentStatus\" IN ('Unpaid','PartiallyPaid','Paid','Overdue')");
+
+                            t.HasCheckConstraint("CK_Sale_SaleChannel_Valid", "\"SaleChannel\" IN ('Workshop','OnlineParts')");
 
                             t.HasCheckConstraint("CK_Sale_SaleStatus_Valid", "\"SaleStatus\" IN ('Draft','Confirmed','Completed','Cancelled')");
 
@@ -1258,6 +1337,36 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.Navigation("CreatedByUser");
                 });
 
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Cart", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.ApplicationUser", "CustomerUser")
+                        .WithMany("Carts")
+                        .HasForeignKey("CustomerApplicationUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CustomerUser");
+                });
+
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.CartItem", b =>
+                {
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Cart", "Cart")
+                        .WithMany("CartItems")
+                        .HasForeignKey("CartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("VehiclePartsManagement.Domain.Entities.Part", "Part")
+                        .WithMany("CartItems")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Cart");
+
+                    b.Navigation("Part");
+                });
+
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Part", b =>
                 {
                     b.HasOne("VehiclePartsManagement.Domain.Entities.PartCategory", "Category")
@@ -1414,14 +1523,12 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.HasOne("VehiclePartsManagement.Domain.Entities.ApplicationUser", "ProcessedByUser")
                         .WithMany("ProcessedSales")
                         .HasForeignKey("ProcessedByApplicationUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("VehiclePartsManagement.Domain.Entities.Vehicle", "Vehicle")
                         .WithMany("Sales")
                         .HasForeignKey("VehicleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("CustomerUser");
 
@@ -1541,6 +1648,8 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
 
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.ApplicationUser", b =>
                 {
+                    b.Navigation("Carts");
+
                     b.Navigation("CreatedPurchases");
 
                     b.Navigation("CreatedUsers");
@@ -1558,8 +1667,15 @@ namespace VehiclePartsManagement.Infrastructure.Migrations
                     b.Navigation("Vehicles");
                 });
 
+            modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Cart", b =>
+                {
+                    b.Navigation("CartItems");
+                });
+
             modelBuilder.Entity("VehiclePartsManagement.Domain.Entities.Part", b =>
                 {
+                    b.Navigation("CartItems");
+
                     b.Navigation("FulfilledPartRequests");
 
                     b.Navigation("PartCompatibilities");

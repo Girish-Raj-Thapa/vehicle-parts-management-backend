@@ -22,6 +22,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ServiceAppointment> ServiceAppointments => Set<ServiceAppointment>();
     public DbSet<AppointmentSlot> AppointmentSlots => Set<AppointmentSlot>();
     public DbSet<ServiceRecord> ServiceRecords => Set<ServiceRecord>();
+    public DbSet<Cart> Carts => Set<Cart>();
+    public DbSet<CartItem> CartItems => Set<CartItem>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<PartRequest> PartRequests => Set<PartRequest>();
     public DbSet<VehicleImage> VehicleImages => Set<VehicleImage>();

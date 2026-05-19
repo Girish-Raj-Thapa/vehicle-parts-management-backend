@@ -38,6 +38,7 @@ public class Part
     public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
     public ICollection<PurchaseItem> PurchaseItems { get; set; } = new List<PurchaseItem>();
     public ICollection<SaleItem> SaleItems { get; set; } = new List<SaleItem>();
+    public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
     public ICollection<PartRequest> FulfilledPartRequests { get; set; } = new List<PartRequest>();
     public ICollection<PartImage> PartImages { get; set; } = new List<PartImage>();
 }

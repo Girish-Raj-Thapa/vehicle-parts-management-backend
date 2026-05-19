@@ -36,6 +36,7 @@ public class ApplicationUser : IdentityUser
     public ICollection<Purchase> CreatedPurchases { get; set; } = new List<Purchase>();
     public ICollection<Sale> CustomerSales { get; set; } = new List<Sale>();
     public ICollection<Sale> ProcessedSales { get; set; } = new List<Sale>();
+    public ICollection<Cart> Carts { get; set; } = new List<Cart>();
     public ICollection<ServiceAppointment> ServiceAppointments { get; set; } = new List<ServiceAppointment>();
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<PartRequest> PartRequests { get; set; } = new List<PartRequest>();
