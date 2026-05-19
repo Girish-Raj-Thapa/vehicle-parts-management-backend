@@ -15,4 +15,5 @@ public class PartResponseDto
     public bool IsInStock { get; set; }
     public bool IsActive { get; set; }
     public List<PartCompatibleVehicleDto> CompatibleVehicles { get; set; } = [];
+    public List<PartImageDto> Images { get; set; } = [];
 }

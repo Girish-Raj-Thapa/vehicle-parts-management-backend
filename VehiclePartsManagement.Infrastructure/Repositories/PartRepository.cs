@@ -26,6 +26,7 @@ public class PartRepository(AppDbContext context)
     public Task<Part?> GetByIdWithDetailsAsync(int partId) =>
         Context.Parts
             .Include(p => p.Category)
+            .Include(p => p.PartImages)
             .Include(p => p.PartCompatibilities)
                 .ThenInclude(pc => pc.Model)
                     .ThenInclude(m => m.Brand)
@@ -35,6 +36,7 @@ public class PartRepository(AppDbContext context)
     {
         var query = Context.Parts
             .Include(p => p.Category)
+            .Include(p => p.PartImages)
             .Include(p => p.PartCompatibilities)
                 .ThenInclude(pc => pc.Model)
                     .ThenInclude(m => m.Brand)
@@ -55,6 +57,7 @@ public class PartRepository(AppDbContext context)
     public Task<List<Part>> GetFeaturedPartsAsync(int limit = 5) =>
         Context.Parts
             .Include(p => p.Category)
+            .Include(p => p.PartImages)
             .Include(p => p.PartCompatibilities)
                 .ThenInclude(pc => pc.Model)
                     .ThenInclude(m => m.Brand)
@@ -66,6 +69,7 @@ public class PartRepository(AppDbContext context)
     public Task<List<Part>> GetRelatedPartsAsync(int partId, int categoryId, int limit = 5) =>
         Context.Parts
             .Include(p => p.Category)
+            .Include(p => p.PartImages)
             .Include(p => p.PartCompatibilities)
                 .ThenInclude(pc => pc.Model)
                     .ThenInclude(m => m.Brand)

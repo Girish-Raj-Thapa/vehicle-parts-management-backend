@@ -12,4 +12,5 @@ public class PartListItemDto
     public bool IsLowStock { get; set; }
     public bool IsActive { get; set; }
     public List<string> CompatibleModels { get; set; } = [];
+    public string? PrimaryImageUrl { get; set; }
 }

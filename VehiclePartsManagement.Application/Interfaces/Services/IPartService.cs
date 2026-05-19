@@ -15,4 +15,7 @@ public interface IPartService
     Task<ApiResponse<bool>> DeleteAsync(int partId);
     Task<ApiResponse<List<PartFeaturedItemDto>>> GetFeaturedAsync();
     Task<ApiResponse<List<PartListItemDto>>> GetRelatedAsync(int partId);
+    Task<ApiResponse<PartImageDto>> UploadImageAsync(int partId, Stream fileStream, string fileName, string contentType, long length, bool isPrimary, int displayOrder);
+    Task<ApiResponse<bool>> DeleteImageAsync(int partId, int imageId);
+    Task<ApiResponse<PartImageDto>> SetPrimaryImageAsync(int partId, int imageId);
 }
