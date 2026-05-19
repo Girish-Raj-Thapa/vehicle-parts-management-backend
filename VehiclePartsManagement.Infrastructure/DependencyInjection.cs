@@ -68,12 +68,8 @@ public static class DependencyInjection
         services.AddScoped<IServiceRecordService, ServiceRecordService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IPartRequestService, PartRequestService>();
-<<<<<<< HEAD
-        services.AddScoped<IReportService, ReportService>();
-        services.AddScoped<IReportPdfService, ReportPdfService>();
-=======
         services.AddScoped<IReportsService, ReportsService>();
->>>>>>> 32b7cbf (Refeat: "Changed Reports folder to report")
+        services.AddScoped<IReportPdfService, ReportPdfService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
 

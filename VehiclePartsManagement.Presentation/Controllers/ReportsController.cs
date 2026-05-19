@@ -7,12 +7,8 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 
 [ApiController]
 [Route("api/reports")]
-<<<<<<< HEAD
 public class ReportsController(
-    IReportService reportService) : ControllerBase
-=======
-public class ReportsController(IReportsService reportsService) : ControllerBase
->>>>>>> 32b7cbf (Refeat: "Changed Reports folder to report")
+    IReportsService reportsService) : ControllerBase
 {
     [Authorize(Roles = "Admin")]
     [HttpGet("admin/sales-revenue")]
@@ -23,7 +19,7 @@ public class ReportsController(IReportsService reportsService) : ControllerBase
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetSalesRevenueReportAsync(query);
+        var result = await reportsService.GetSalesRevenueReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -37,7 +33,7 @@ public class ReportsController(IReportsService reportsService) : ControllerBase
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetPurchaseExpenseReportAsync(query);
+        var result = await reportsService.GetPurchaseExpenseReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -51,7 +47,7 @@ public class ReportsController(IReportsService reportsService) : ControllerBase
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetPaymentCollectionReportAsync(query);
+        var result = await reportsService.GetPaymentCollectionReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -65,7 +61,7 @@ public class ReportsController(IReportsService reportsService) : ControllerBase
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetReceivableReportAsync(query);
+        var result = await reportsService.GetReceivableReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -79,7 +75,7 @@ public class ReportsController(IReportsService reportsService) : ControllerBase
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetProfitLossReportAsync(query);
+        var result = await reportsService.GetProfitLossReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -93,7 +89,7 @@ public class ReportsController(IReportsService reportsService) : ControllerBase
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetDailyCashFlowReportAsync(query);
+        var result = await reportsService.GetDailyCashFlowReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -107,7 +103,7 @@ public class ReportsController(IReportsService reportsService) : ControllerBase
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetDiscountReportAsync(query);
+        var result = await reportsService.GetDiscountReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -121,7 +117,7 @@ public class ReportsController(IReportsService reportsService) : ControllerBase
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetDashboardSummaryAsync(query);
+        var result = await reportsService.GetDashboardSummaryAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 

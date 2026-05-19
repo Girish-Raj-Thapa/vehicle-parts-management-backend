@@ -8,7 +8,7 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 [ApiController]
 [Route("api/report-pdf")]
 public class ReportPdfController(
-    IReportService reportService,
+    IReportsService reportsService,
     IReportPdfService reportPdfService) : ControllerBase
 {
     private static void DisablePaginationForPdf(ReportQueryDto query)
@@ -45,7 +45,7 @@ public class ReportPdfController(
         }
         DisablePaginationForPdf(query);
 
-        var result = await reportService.GetSalesRevenueReportAsync(query);
+        var result = await reportsService.GetSalesRevenueReportAsync(query);
         if (!result.Success)
         {
             return BadRequest(result);
@@ -72,7 +72,7 @@ public class ReportPdfController(
         }
         DisablePaginationForPdf(query);
 
-        var result = await reportService.GetPurchaseExpenseReportAsync(query);
+        var result = await reportsService.GetPurchaseExpenseReportAsync(query);
         if (!result.Success)
         {
             return BadRequest(result);
@@ -99,7 +99,7 @@ public class ReportPdfController(
         }
         DisablePaginationForPdf(query);
 
-        var result = await reportService.GetProfitLossReportAsync(query);
+        var result = await reportsService.GetProfitLossReportAsync(query);
         if (!result.Success)
         {
             return BadRequest(result);
@@ -126,7 +126,7 @@ public class ReportPdfController(
         }
         DisablePaginationForPdf(query);
 
-        var result = await reportService.GetPaymentCollectionReportAsync(query);
+        var result = await reportsService.GetPaymentCollectionReportAsync(query);
         if (!result.Success)
         {
             return BadRequest(result);
@@ -153,7 +153,7 @@ public class ReportPdfController(
         }
         DisablePaginationForPdf(query);
 
-        var result = await reportService.GetReceivableReportAsync(query);
+        var result = await reportsService.GetReceivableReportAsync(query);
         if (!result.Success)
         {
             return BadRequest(result);
@@ -180,7 +180,7 @@ public class ReportPdfController(
         }
         DisablePaginationForPdf(query);
 
-        var result = await reportService.GetDailyCashFlowReportAsync(query);
+        var result = await reportsService.GetDailyCashFlowReportAsync(query);
         if (!result.Success)
         {
             return BadRequest(result);
@@ -207,7 +207,7 @@ public class ReportPdfController(
         }
         DisablePaginationForPdf(query);
 
-        var result = await reportService.GetDiscountReportAsync(query);
+        var result = await reportsService.GetDiscountReportAsync(query);
         if (!result.Success)
         {
             return BadRequest(result);
@@ -234,7 +234,7 @@ public class ReportPdfController(
         }
         DisablePaginationForPdf(query);
 
-        var result = await reportService.GetDashboardSummaryAsync(query);
+        var result = await reportsService.GetDashboardSummaryAsync(query);
         if (!result.Success)
         {
             return BadRequest(result);
