@@ -28,15 +28,28 @@ public class SaleRepository(AppDbContext context)
                 s.SaleStatus != SaleStatus.Draft &&
                 s.SaleStatus != SaleStatus.Cancelled);
 
+        var utcFromDate = fromDate.HasValue
+            ? DateTime.SpecifyKind(fromDate.Value.Date, DateTimeKind.Utc)
+            : (DateTime?)null;
+        var utcToDateExclusive = toDate.HasValue
+            ? DateTime.SpecifyKind(toDate.Value.Date.AddDays(1), DateTimeKind.Utc)
+            : (DateTime?)null;
+
         if (fromDate.HasValue)
         {
-            query = query.Where(s => s.SaleDate.Date >= fromDate.Value.Date);
+            query = query.Where(s => s.SaleDate >= utcFromDate!.Value);
         }
 
         if (toDate.HasValue)
         {
-            query = query.Where(s => s.SaleDate.Date <= toDate.Value.Date);
+            query = query.Where(s => s.SaleDate < utcToDateExclusive!.Value);
         }
+
+        if (paymentStatus.HasValue)
+        {
+            query = query.Where(s => s.PaymentStatus == paymentStatus.Value);
+        }
+
         var totalItems = await query.CountAsync();
         if (totalItems == 0)
         {

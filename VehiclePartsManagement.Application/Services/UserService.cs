@@ -178,7 +178,7 @@ public class UserService(
         PaymentStatus? parsedPaymentStatus = null;
         if (!string.IsNullOrWhiteSpace(paymentStatus))
         {
-            if (!Enum.TryParse<PaymentStatus>(paymentStatus, true, out var status))
+            if (!TryParseCustomerPaymentStatus(paymentStatus, out var status))
             {
                 return PagedListFailure<CustomerPurchaseHistoryListItemDto>(
                     "Payment status is invalid.",
@@ -774,6 +774,24 @@ public class UserService(
 
     private static string GetVehicleName(Vehicle vehicle) =>
         $"{vehicle.Model.Brand.BrandName} {vehicle.Model.ModelName}";
+
+
+    private static bool TryParseCustomerPaymentStatus(string value, out PaymentStatus paymentStatus)
+    {
+        if (Enum.TryParse<PaymentStatus>(value, true, out paymentStatus))
+        {
+            return true;
+        }
+
+        if (string.Equals(value, "Partial", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "PartialPaid", StringComparison.OrdinalIgnoreCase))
+        {
+            paymentStatus = PaymentStatus.PartiallyPaid;
+            return true;
+        }
+
+        return false;
+    }
 
 
     private async Task<string?> ValidateRolesAsync(IEnumerable<string> roles, IReadOnlyCollection<string>? allowedRoles = null)
