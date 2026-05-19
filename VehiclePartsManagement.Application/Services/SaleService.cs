@@ -9,6 +9,9 @@ using VehiclePartsManagement.Application.Interfaces.Services;
 using VehiclePartsManagement.Domain.Entities;
 using VehiclePartsManagement.Domain.Enums;
 
+using Microsoft.Extensions.Options;
+using VehiclePartsManagement.Application.Config;
+
 namespace VehiclePartsManagement.Application.Services;
 
 public class SaleService(
@@ -19,8 +22,11 @@ public class SaleService(
     IVehicleRepository vehicleRepository,
     IStockMovementRepository stockMovementRepository,
     UserManager<ApplicationUser> userManager,
-    IPaymentService paymentService) : ISaleService
+    IPaymentService paymentService,
+    IOptions<KhaltiOptions> khaltiOptions) : ISaleService
 {
+    private readonly KhaltiOptions _khaltiOptions = khaltiOptions.Value;
+
     public async Task<ApiResponse<IEnumerable<SaleSummaryDto>>> GetAllSalesAsync()
     {
         var sales = await saleRepository.GetAllSalesAsync();
@@ -50,22 +56,8 @@ public class SaleService(
         string? paymentUrl = null;
         if (sale.BalanceDue > 0)
         {
-            try
-            {
-                var initiateResult = await paymentService.InitiateKhaltiPaymentAsync(
-                    new KhaltiInitiatePaymentDto { SaleId = sale.SaleId },
-                    sale.CustomerApplicationUserId,
-                    canManagePayments: true);
-
-                if (initiateResult.Success && initiateResult.Data is KhaltiInitiateResponseDto paymentData)
-                {
-                    paymentUrl = paymentData.PaymentUrl;
-                }
-            }
-            catch
-            {
-                // Fallback: if Khalti initiation fails, proceed without the payment button
-            }
+            // Direct endpoint that dynamically initiates Khalti checkout and redirects the user
+            paymentUrl = _khaltiOptions.ReturnUrl.Replace("/khalti/callback", $"/khalti/pay/{sale.SaleId}");
         }
 
         var subject = $"Invoice for Sale #{sale.SaleInvoiceNo}";
