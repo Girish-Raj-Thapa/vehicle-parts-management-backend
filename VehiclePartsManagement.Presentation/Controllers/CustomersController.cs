@@ -10,7 +10,7 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 
 [ApiController]
 [Route("api/customers")]
-[Authorize(Roles = "Admin,Staff")]
+[Authorize]
 public class CustomersController(IUserService userService, IVehicleService vehicleService) : ControllerBase
 {
     [HttpGet("{id}")]
