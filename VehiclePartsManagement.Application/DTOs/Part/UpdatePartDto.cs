@@ -22,4 +22,7 @@ public class UpdatePartDto
     public int? LowStockThreshold { get; set; }
 
     public bool? IsActive { get; set; }
+
+    [Range(0, int.MaxValue)]
+    public int? CurrentStock { get; set; }
 }

@@ -23,4 +23,7 @@ public class CreatePartDto
 
     [Range(0, int.MaxValue)]
     public int LowStockThreshold { get; set; } = 10;
+
+    [Range(0, int.MaxValue)]
+    public int CurrentStock { get; set; } = 0;
 }

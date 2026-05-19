@@ -60,6 +60,10 @@ public class PartService(
         {
             partQuery = partQuery.Where(p => p.IsActive == query.IsActive.Value);
         }
+        else
+        {
+            partQuery = partQuery.Where(p => p.IsActive);
+        }
 
         var totalItems = await partQuery.CountAsync();
 
@@ -100,7 +104,7 @@ public class PartService(
             PartName = dto.PartName,
             PartDescription = dto.PartDescription ?? string.Empty,
             SellingPrice = dto.SellingPrice,
-            CurrentStock = 0,
+            CurrentStock = dto.CurrentStock,
             LowStockThreshold = dto.LowStockThreshold,
             IsActive = true
         };
@@ -127,6 +131,7 @@ public class PartService(
         if (dto.SellingPrice.HasValue) part.SellingPrice = dto.SellingPrice.Value;
         if (dto.LowStockThreshold.HasValue) part.LowStockThreshold = dto.LowStockThreshold.Value;
         if (dto.IsActive.HasValue) part.IsActive = dto.IsActive.Value;
+        if (dto.CurrentStock.HasValue) part.CurrentStock = dto.CurrentStock.Value;
 
         partRepository.Update(part);
         await partRepository.SaveChangesAsync();
