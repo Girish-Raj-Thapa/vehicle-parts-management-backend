@@ -13,12 +13,10 @@ public class Sale
     [MaxLength(450)]
     public string CustomerApplicationUserId { get; set; } = string.Empty;
 
-    [Required]
-    public int VehicleId { get; set; }
+    public int? VehicleId { get; set; }
 
-    [Required]
     [MaxLength(450)]
-    public string ProcessedByApplicationUserId { get; set; } = string.Empty;
+    public string? ProcessedByApplicationUserId { get; set; }
 
     [Required]
     [MaxLength(100)]
@@ -28,6 +26,9 @@ public class Sale
 
     [Required]
     public SaleStatus SaleStatus { get; set; } = SaleStatus.Draft;
+
+    [Required]
+    public SaleChannel SaleChannel { get; set; } = SaleChannel.Workshop;
 
     [Column(TypeName = "numeric(18,2)")]
     public decimal SubTotal { get; set; } = 0;
@@ -53,10 +54,10 @@ public class Sale
     public ApplicationUser CustomerUser { get; set; } = null!;
 
     [ForeignKey(nameof(VehicleId))]
-    public Vehicle Vehicle { get; set; } = null!;
+    public Vehicle? Vehicle { get; set; }
 
     [ForeignKey(nameof(ProcessedByApplicationUserId))]
-    public ApplicationUser ProcessedByUser { get; set; } = null!;
+    public ApplicationUser? ProcessedByUser { get; set; }
 
     public ICollection<SaleItem> SaleItems { get; set; } = new List<SaleItem>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();

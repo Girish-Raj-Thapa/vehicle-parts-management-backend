@@ -115,7 +115,8 @@ public class SaleRepository(AppDbContext context)
         int page,
         int pageSize,
         string? customerApplicationUserId,
-        PaymentStatus? paymentStatus)
+        PaymentStatus? paymentStatus,
+        SaleChannel? saleChannel)
     {
         var query = Context.Sales
             .AsNoTracking()
@@ -132,6 +133,10 @@ public class SaleRepository(AppDbContext context)
         if (paymentStatus.HasValue)
         {
             query = query.Where(s => s.PaymentStatus == paymentStatus.Value);
+        }
+        if (saleChannel.HasValue)
+        {
+            query = query.Where(s => s.SaleChannel == saleChannel.Value);
         }
 
         var totalItems = await query.CountAsync();

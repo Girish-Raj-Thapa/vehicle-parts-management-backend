@@ -646,9 +646,9 @@ public class UserService(
             SaleId = sale.SaleId,
             SaleInvoiceNo = sale.SaleInvoiceNo,
             SaleDate = DateOnly.FromDateTime(sale.SaleDate),
-            VehicleId = sale.VehicleId,
-            VehicleNumber = sale.Vehicle.VehicleNumber,
-            VehicleName = GetVehicleName(sale.Vehicle),
+            VehicleId = sale.VehicleId ?? 0,
+            VehicleNumber = sale.Vehicle?.VehicleNumber ?? string.Empty,
+            VehicleName = sale.Vehicle is null ? string.Empty : GetVehicleName(sale.Vehicle),
             SaleStatus = sale.SaleStatus.ToString(),
             TotalAmount = sale.TotalAmount,
             PaidAmount = sale.Payments.Sum(p => p.PaymentAmount),
@@ -666,9 +666,9 @@ public class UserService(
             SaleStatus = sale.SaleStatus.ToString(),
             Vehicle = new CustomerHistoryVehicleDto
             {
-                VehicleId = sale.VehicleId,
-                VehicleNumber = sale.Vehicle.VehicleNumber,
-                VehicleName = GetVehicleName(sale.Vehicle)
+                VehicleId = sale.VehicleId ?? 0,
+                VehicleNumber = sale.Vehicle?.VehicleNumber ?? string.Empty,
+                VehicleName = sale.Vehicle is null ? string.Empty : GetVehicleName(sale.Vehicle)
             },
             Items = sale.SaleItems
                 .OrderBy(si => si.SaleItemId)

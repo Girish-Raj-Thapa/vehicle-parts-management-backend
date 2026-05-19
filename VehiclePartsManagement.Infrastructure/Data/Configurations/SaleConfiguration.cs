@@ -21,6 +21,9 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
             tableBuilder.HasCheckConstraint(
                 "CK_Sale_PaymentStatus_Valid",
                 "\"PaymentStatus\" IN ('Unpaid','PartiallyPaid','Paid','Overdue')");
+            tableBuilder.HasCheckConstraint(
+                "CK_Sale_SaleChannel_Valid",
+                "\"SaleChannel\" IN ('Workshop','OnlineParts')");
         });
 
         builder.HasKey(s => s.SaleId);
@@ -30,7 +33,6 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
             .HasMaxLength(450);
 
         builder.Property(s => s.ProcessedByApplicationUserId)
-            .IsRequired()
             .HasMaxLength(450);
 
         builder.Property(s => s.SaleInvoiceNo)
@@ -41,6 +43,12 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(30);
+
+        builder.Property(s => s.SaleChannel)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(30)
+            .HasDefaultValue(Domain.Enums.SaleChannel.Workshop);
 
         builder.Property(s => s.PaymentStatus)
             .IsRequired()

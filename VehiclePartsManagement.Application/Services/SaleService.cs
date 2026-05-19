@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Application.DTOs.Sale;
 using VehiclePartsManagement.Application.DTOs.Sales;
@@ -148,88 +149,16 @@ public class SaleService(
                 });
         }
 
-        // Sale requires at least one line item.
-        if (dto.Items.Count == 0)
+        var lineValidation = await ValidateAndBuildSaleItemsAsync(dto.Items);
+        if (!lineValidation.Success)
         {
             return ApiResponse<SaleCreateResponseDto>.FailureResponse(
-                "At least one sale item is required.",
-                new Dictionary<string, List<string>>
-                {
-                    { "items", ["At least one sale item is required."] }
-                });
+                lineValidation.Message,
+                lineValidation.Errors);
         }
 
-        // Duplicate part rows are blocked to keep line-level arithmetic deterministic.
-        var duplicatePartIds = dto.Items
-            .GroupBy(i => i.PartId)
-            .Where(g => g.Count() > 1)
-            .Select(g => g.Key)
-            .ToList();
-
-        if (duplicatePartIds.Count > 0)
-        {
-            return ApiResponse<SaleCreateResponseDto>.FailureResponse(
-                "Duplicate part lines are not allowed in one sale.",
-                new Dictionary<string, List<string>>
-                {
-                    { "items", ["Duplicate part lines are not allowed in one sale."] }
-                });
-        }
-
-        // Batch-load parts to validate all references in a single repository call.
-        var partIds = dto.Items.Select(i => i.PartId).Distinct().ToList();
-        var parts = await partRepository.GetByIdsAsync(partIds);
-        if (parts.Count != partIds.Count)
-        {
-            return ApiResponse<SaleCreateResponseDto>.FailureResponse(
-                "One or more parts were not found.",
-                new Dictionary<string, List<string>>
-                {
-                    { "items", ["One or more parts were not found."] }
-                });
-        }
-
-        var partsById = parts.ToDictionary(p => p.PartId);
-
-        // Validate inventory constraints before any write operation is executed.
-        foreach (var line in dto.Items)
-        {
-            var part = partsById[line.PartId];
-            if (!part.IsActive)
-            {
-                return ApiResponse<SaleCreateResponseDto>.FailureResponse(
-                    $"Part '{part.PartName}' is inactive.",
-                    new Dictionary<string, List<string>>
-                    {
-                        { "items", [$"Part '{part.PartName}' is inactive."] }
-                    });
-            }
-
-            if (part.CurrentStock < line.Quantity)
-            {
-                return ApiResponse<SaleCreateResponseDto>.FailureResponse(
-                    $"Insufficient stock for part '{part.PartName}'.",
-                    new Dictionary<string, List<string>>
-                    {
-                        { "items", [$"Insufficient stock for part '{part.PartName}'."] }
-                    });
-            }
-        }
-
-        // Price snapshot is taken at sale time for invoice/history consistency.
-        var saleItems = dto.Items.Select(line =>
-        {
-            var part = partsById[line.PartId];
-            var lineTotal = part.SellingPrice * line.Quantity;
-
-            return new SaleItem
-            {
-                PartId = line.PartId,
-                QuantitySold = line.Quantity,
-                UnitPriceAtSale = part.SellingPrice,
-                LineTotal = lineTotal
-            };
-        }).ToList();
+        var saleItems = lineValidation.SaleItems;
+        var partsById = lineValidation.PartsById;
 
         // Loyalty discount rule: 10% only when subtotal is strictly greater than threshold.
         var subTotal = saleItems.Sum(i => i.LineTotal);
@@ -305,6 +234,7 @@ public class SaleService(
             CustomerApplicationUserId = dto.CustomerUserId,
             VehicleId = dto.VehicleId,
             ProcessedByApplicationUserId = processedByApplicationUserId,
+            SaleChannel = SaleChannel.Workshop,
             SaleInvoiceNo = $"SAL-{DateTime.UtcNow:yyyyMMddHHmmssfff}",
             SaleDate = DateTime.UtcNow,
             SaleStatus = SaleStatus.Completed,
@@ -377,6 +307,94 @@ public class SaleService(
             "Sale invoice created successfully");
     }
 
+    public async Task<ApiResponse<SaleCreateResponseDto>> CreateOnlineAsync(
+        CreateOnlineSaleDto dto,
+        string customerUserId)
+    {
+        var customer = await userManager.FindByIdAsync(customerUserId);
+        if (customer is null || !await userManager.IsInRoleAsync(customer, "Customer"))
+        {
+            return ApiResponse<SaleCreateResponseDto>.FailureResponse(
+                "Customer not found.",
+                new Dictionary<string, List<string>>
+                {
+                    { "customerUserId", ["Customer not found."] }
+                });
+        }
+
+        var lineValidation = await ValidateAndBuildSaleItemsAsync(dto.Items);
+        if (!lineValidation.Success)
+        {
+            return ApiResponse<SaleCreateResponseDto>.FailureResponse(
+                lineValidation.Message,
+                lineValidation.Errors);
+        }
+
+        var saleItems = lineValidation.SaleItems;
+        var partsById = lineValidation.PartsById;
+
+        var subTotal = saleItems.Sum(i => i.LineTotal);
+        var discountPercent = subTotal > LoyaltyThresholdAmount ? LoyaltyDiscountPercent : 0m;
+        var discountAmount = Math.Round((subTotal * discountPercent) / 100m, 2, MidpointRounding.AwayFromZero);
+        var totalAmount = subTotal - discountAmount;
+
+        var sale = new Sale
+        {
+            CustomerApplicationUserId = customerUserId,
+            VehicleId = null,
+            ProcessedByApplicationUserId = null,
+            SaleChannel = SaleChannel.OnlineParts,
+            SaleInvoiceNo = $"SAL-{DateTime.UtcNow:yyyyMMddHHmmssfff}",
+            SaleDate = DateTime.UtcNow,
+            SaleStatus = SaleStatus.Completed,
+            SubTotal = subTotal,
+            LoyaltyDiscountPercent = discountPercent,
+            DiscountAmount = discountAmount,
+            TotalAmount = totalAmount,
+            BalanceDue = totalAmount,
+            PaymentStatus = PaymentStatus.Unpaid,
+            DueDate = null,
+            SaleItems = saleItems
+        };
+
+        saleRepository.Create(sale);
+        await saleRepository.SaveChangesAsync();
+
+        foreach (var line in dto.Items)
+        {
+            var part = partsById[line.PartId];
+            part.CurrentStock -= line.Quantity;
+            partRepository.Update(part);
+
+            stockMovementRepository.Create(new StockMovement
+            {
+                PartId = part.PartId,
+                MovementType = StockMovementType.Out,
+                MovementQuantity = line.Quantity,
+                MovementDate = DateTime.UtcNow,
+                ReferenceType = StockMovementReferenceType.Sale,
+                ReferenceId = sale.SaleId
+            });
+        }
+
+        await saleRepository.SaveChangesAsync();
+
+        return ApiResponse<SaleCreateResponseDto>.SuccessResponse(
+            new SaleCreateResponseDto
+            {
+                SaleId = sale.SaleId,
+                SaleInvoiceNo = sale.SaleInvoiceNo,
+                SubTotal = sale.SubTotal,
+                LoyaltyDiscountPercent = sale.LoyaltyDiscountPercent,
+                DiscountAmount = sale.DiscountAmount,
+                TotalAmount = sale.TotalAmount,
+                PaidAmount = 0m,
+                BalanceDue = sale.BalanceDue,
+                PaymentStatus = MapPaymentStatus(sale.PaymentStatus)
+            },
+            "Online part order created successfully");
+    }
+
 
     /// <summary>
     /// Retrieves paged sales with optional customer and payment-status filters.
@@ -399,13 +417,23 @@ public class SaleService(
 
             paymentStatus = parsedStatus;
         }
+        SaleChannel? saleChannel = null;
+        if (!string.IsNullOrWhiteSpace(query.SaleChannel))
+        {
+            if (!Enum.TryParse<SaleChannel>(query.SaleChannel, true, out var parsedChannel))
+            {
+                return PagedFailure("Sale channel is invalid.", "saleChannel");
+            }
+
+            saleChannel = parsedChannel;
+        }
 
         // Customer-scoped reads override explicit query customer filter for authorization safety.
         var customerFilter = !string.IsNullOrWhiteSpace(customerScopeUserId)
             ? customerScopeUserId
             : query.CustomerUserId;
 
-        var (items, totalItems) = await saleRepository.GetPagedAsync(page, pageSize, customerFilter, paymentStatus);
+        var (items, totalItems) = await saleRepository.GetPagedAsync(page, pageSize, customerFilter, paymentStatus, saleChannel);
         var data = items.Select(MapListItem).ToList();
 
         return PagedResponse<List<SaleListItemDto>>.SuccessPagedResponse(
@@ -457,6 +485,68 @@ public class SaleService(
         return ApiResponse<SaleInvoiceDto>.SuccessResponse(
             MapInvoice(sale),
             "Invoice retrieved successfully");
+    }
+
+    public async Task<ApiResponse<SaleDetailDto>> GetMyOnlineOrderByIdAsync(int saleId, string customerUserId)
+    {
+        var sale = await saleRepository.GetByIdForCustomerAsync(saleId, customerUserId);
+        if (sale is null || sale.SaleChannel != SaleChannel.OnlineParts)
+        {
+            return ApiResponse<SaleDetailDto>.FailureResponse("Order not found.");
+        }
+
+        return ApiResponse<SaleDetailDto>.SuccessResponse(
+            MapDetail(sale),
+            "Order retrieved successfully");
+    }
+
+    public async Task<ApiResponse<SaleInvoiceDto>> GetMyOnlineOrderInvoiceAsync(int saleId, string customerUserId)
+    {
+        var sale = await saleRepository.GetByIdForCustomerAsync(saleId, customerUserId);
+        if (sale is null || sale.SaleChannel != SaleChannel.OnlineParts)
+        {
+            return ApiResponse<SaleInvoiceDto>.FailureResponse("Order invoice not found.");
+        }
+
+        return ApiResponse<SaleInvoiceDto>.SuccessResponse(
+            MapInvoice(sale),
+            "Order invoice retrieved successfully");
+    }
+
+    public async Task<ApiResponse<List<RecentPurchasedPartDto>>> GetRecentPurchasedPartsAsync(string customerUserId, int limit)
+    {
+        var sanitizedLimit = Math.Clamp(limit, 1, 50);
+
+        var data = await saleRepository
+            .FindByCondition(
+                s => s.CustomerApplicationUserId == customerUserId &&
+                     s.SaleChannel == SaleChannel.OnlineParts &&
+                     s.SaleStatus != SaleStatus.Cancelled,
+                trackChanges: false)
+            .SelectMany(s => s.SaleItems.Select(si => new
+            {
+                si.PartId,
+                PartName = si.Part.PartName,
+                s.SaleDate,
+                si.QuantitySold
+            }))
+            .GroupBy(x => new { x.PartId, x.PartName })
+            .Select(g => new RecentPurchasedPartDto
+            {
+                PartId = g.Key.PartId,
+                PartName = g.Key.PartName,
+                LastPurchasedAt = g.Max(x => x.SaleDate),
+                TotalQuantityPurchased = g.Sum(x => x.QuantitySold),
+                PurchaseCount = g.Count()
+            })
+            .OrderByDescending(x => x.LastPurchasedAt)
+            .ThenByDescending(x => x.PartId)
+            .Take(sanitizedLimit)
+            .ToListAsync();
+
+        return ApiResponse<List<RecentPurchasedPartDto>>.SuccessResponse(
+            data,
+            "Recent purchased parts retrieved successfully.");
     }
 
 
@@ -519,6 +609,7 @@ public class SaleService(
             TotalAmount = sale.TotalAmount,
             PaidAmount = paidAmount,
             BalanceDue = sale.BalanceDue,
+            SaleChannel = sale.SaleChannel.ToString(),
             PaymentStatus = MapPaymentStatus(sale.PaymentStatus),
             DueDate = sale.DueDate.HasValue ? DateOnly.FromDateTime(sale.DueDate.Value) : null
         };
@@ -540,13 +631,7 @@ public class SaleService(
                 Email = sale.CustomerUser.Email ?? string.Empty,
                 PhoneNumber = sale.CustomerUser.PhoneNumber ?? string.Empty
             },
-            Vehicle = new SaleDetailVehicleDto
-            {
-                VehicleId = sale.VehicleId,
-                VehicleNumber = sale.Vehicle.VehicleNumber,
-                BrandName = sale.Vehicle.Model.Brand.BrandName,
-                ModelName = sale.Vehicle.Model.ModelName
-            },
+            Vehicle = MapSaleVehicle(sale),
             Items = sale.SaleItems.Select(i => new SaleDetailItemDto
             {
                 PartId = i.PartId,
@@ -561,6 +646,7 @@ public class SaleService(
             TotalAmount = sale.TotalAmount,
             PaidAmount = paidAmount,
             BalanceDue = sale.BalanceDue,
+            SaleChannel = sale.SaleChannel.ToString(),
             PaymentStatus = MapPaymentStatus(sale.PaymentStatus),
             DueDate = sale.DueDate.HasValue ? DateOnly.FromDateTime(sale.DueDate.Value) : null
         };
@@ -575,7 +661,7 @@ public class SaleService(
             InvoiceDate = DateOnly.FromDateTime(sale.SaleDate),
             CustomerName = sale.CustomerUser.FullName,
             CustomerEmail = sale.CustomerUser.Email ?? string.Empty,
-            Vehicle = $"{sale.Vehicle.Model.Brand.BrandName} {sale.Vehicle.Model.ModelName} - {sale.Vehicle.VehicleNumber}",
+            Vehicle = BuildInvoiceVehicleLabel(sale),
             Items = sale.SaleItems.Select(i => new SaleInvoiceItemDto
             {
                 PartName = i.Part.PartName,
@@ -604,4 +690,106 @@ public class SaleService(
             Data = new List<SaleListItemDto>(),
             Pagination = new PaginationMeta()
         };
+
+    private async Task<(bool Success, string Message, Dictionary<string, List<string>> Errors, List<SaleItem> SaleItems, Dictionary<int, Part> PartsById)>
+        ValidateAndBuildSaleItemsAsync(IReadOnlyCollection<CreateSaleItemDto> items)
+    {
+        if (items.Count == 0)
+        {
+            return (
+                false,
+                "At least one sale item is required.",
+                new Dictionary<string, List<string>> { { "items", ["At least one sale item is required."] } },
+                [],
+                new Dictionary<int, Part>());
+        }
+
+        var duplicatePartIds = items
+            .GroupBy(i => i.PartId)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicatePartIds.Count > 0)
+        {
+            return (
+                false,
+                "Duplicate part lines are not allowed in one sale.",
+                new Dictionary<string, List<string>> { { "items", ["Duplicate part lines are not allowed in one sale."] } },
+                [],
+                new Dictionary<int, Part>());
+        }
+
+        var partIds = items.Select(i => i.PartId).Distinct().ToList();
+        var parts = await partRepository.GetByIdsAsync(partIds);
+        if (parts.Count != partIds.Count)
+        {
+            return (
+                false,
+                "One or more parts were not found.",
+                new Dictionary<string, List<string>> { { "items", ["One or more parts were not found."] } },
+                [],
+                new Dictionary<int, Part>());
+        }
+
+        var partsById = parts.ToDictionary(p => p.PartId);
+        foreach (var line in items)
+        {
+            var part = partsById[line.PartId];
+            if (!part.IsActive)
+            {
+                return (
+                    false,
+                    $"Part '{part.PartName}' is inactive.",
+                    new Dictionary<string, List<string>> { { "items", [$"Part '{part.PartName}' is inactive."] } },
+                    [],
+                    new Dictionary<int, Part>());
+            }
+
+            if (part.CurrentStock < line.Quantity)
+            {
+                return (
+                    false,
+                    $"Insufficient stock for part '{part.PartName}'.",
+                    new Dictionary<string, List<string>> { { "items", [$"Insufficient stock for part '{part.PartName}'."] } },
+                    [],
+                    new Dictionary<int, Part>());
+            }
+        }
+
+        var saleItems = items.Select(line =>
+        {
+            var part = partsById[line.PartId];
+            return new SaleItem
+            {
+                PartId = line.PartId,
+                QuantitySold = line.Quantity,
+                UnitPriceAtSale = part.SellingPrice,
+                LineTotal = part.SellingPrice * line.Quantity
+            };
+        }).ToList();
+
+        return (true, string.Empty, new Dictionary<string, List<string>>(), saleItems, partsById);
+    }
+
+    private static SaleDetailVehicleDto MapSaleVehicle(Sale sale)
+    {
+        if (sale.Vehicle is null)
+        {
+            return new SaleDetailVehicleDto();
+        }
+
+        return new SaleDetailVehicleDto
+        {
+            VehicleId = sale.VehicleId ?? 0,
+            VehicleNumber = sale.Vehicle.VehicleNumber,
+            BrandName = sale.Vehicle.Model.Brand.BrandName,
+            ModelName = sale.Vehicle.Model.ModelName
+        };
+    }
+
+    private static string BuildInvoiceVehicleLabel(Sale sale) =>
+        sale.Vehicle is null
+            ? "N/A"
+            : $"{sale.Vehicle.Model.Brand.BrandName} {sale.Vehicle.Model.ModelName} - {sale.Vehicle.VehicleNumber}";
 }

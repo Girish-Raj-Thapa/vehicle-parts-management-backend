@@ -12,6 +12,7 @@ public class SaleListItemDto
     public decimal TotalAmount { get; set; }
     public decimal PaidAmount { get; set; }
     public decimal BalanceDue { get; set; }
+    public string SaleChannel { get; set; } = string.Empty;
     public string PaymentStatus { get; set; } = string.Empty;
     public DateOnly? DueDate { get; set; }
 }

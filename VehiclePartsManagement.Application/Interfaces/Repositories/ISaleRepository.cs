@@ -24,7 +24,8 @@ public interface ISaleRepository : IRepositoryBase<Sale>
         int page,
         int pageSize,
         string? customerApplicationUserId,
-        PaymentStatus? paymentStatus);
+        PaymentStatus? paymentStatus,
+        SaleChannel? saleChannel);
 
     /// <summary>
     /// Returns one sale with full detail used by sales detail and invoice views.

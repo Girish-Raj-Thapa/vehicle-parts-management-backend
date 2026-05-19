@@ -45,6 +45,83 @@ public class SalesController(ISaleService saleService) : ControllerBase
             : BadRequest(result);
     }
 
+    /// <summary>
+    /// Creates an online parts-only sale for the authenticated customer.
+    /// </summary>
+    [HttpPost("online-checkout")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> CreateOnline([FromBody] CreateOnlineSaleDto dto)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await saleService.CreateOnlineAsync(dto, userId);
+        return result.Success
+            ? StatusCode(StatusCodes.Status201Created, result)
+            : BadRequest(result);
+    }
+
+    [HttpGet("my-online-orders")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyOnlineOrders([FromQuery] SaleListQueryDto query)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        query.Mine = true;
+        query.SaleChannel = "OnlineParts";
+        var result = await saleService.GetPagedAsync(query, userId);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("my-online-orders/{saleId:int}")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyOnlineOrderById(int saleId)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await saleService.GetMyOnlineOrderByIdAsync(saleId, userId);
+        return result.Success ? Ok(result) : NotFound(result);
+    }
+
+    [HttpGet("my-online-orders/{saleId:int}/invoice")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyOnlineOrderInvoice(int saleId)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await saleService.GetMyOnlineOrderInvoiceAsync(saleId, userId);
+        return result.Success ? Ok(result) : NotFound(result);
+    }
+
+    [HttpGet("my-online-orders/recent-parts")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> GetMyRecentPurchasedParts([FromQuery] int limit = 10)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await saleService.GetRecentPurchasedPartsAsync(userId, limit);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
 
     /// <summary>
     /// Returns paged sales with role-based customer scoping.

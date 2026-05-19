@@ -17,6 +17,8 @@ public class SaleListQueryDto
 
     [MaxLength(30)]
     public string? PaymentStatus { get; set; }
+    [MaxLength(30)]
+    public string? SaleChannel { get; set; }
 
     public string? CustomerUserId { get; set; }
 
