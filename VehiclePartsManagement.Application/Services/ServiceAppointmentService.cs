@@ -37,7 +37,7 @@ public class ServiceAppointmentService(
         }
 
         var selectedDate = dto.AppointmentDate;
-        var selectedTime = dto.AppointmentTime.Trim();
+        var selectedTime = dto.AppointmentTime?.Trim();
 
         // When slot id is provided, slot metadata becomes the source of truth for date/time.
         if (dto.AppointmentSlotId.HasValue)
@@ -78,7 +78,27 @@ public class ServiceAppointmentService(
             }
         }
 
-        if (selectedDate < DateOnly.FromDateTime(DateTime.UtcNow))
+        if (!dto.AppointmentSlotId.HasValue && !selectedDate.HasValue)
+        {
+            return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
+                "Appointment date is required when appointment slot is not selected.",
+                new Dictionary<string, List<string>>
+                {
+                    { "appointmentDate", ["Appointment date is required when appointment slot is not selected."] }
+                });
+        }
+
+        if (!dto.AppointmentSlotId.HasValue && string.IsNullOrWhiteSpace(selectedTime))
+        {
+            return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
+                "Appointment time is required when appointment slot is not selected.",
+                new Dictionary<string, List<string>>
+                {
+                    { "appointmentTime", ["Appointment time is required when appointment slot is not selected."] }
+                });
+        }
+
+        if (selectedDate.HasValue && selectedDate.Value < DateOnly.FromDateTime(DateTime.UtcNow))
         {
             return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
                 "Appointment date cannot be in the past.",
@@ -88,7 +108,7 @@ public class ServiceAppointmentService(
                 });
         }
 
-        if (!TimeOnly.TryParse(selectedTime, out _))
+        if (!string.IsNullOrWhiteSpace(selectedTime) && !TimeOnly.TryParse(selectedTime, out _))
         {
             return ApiResponse<ServiceAppointmentCreateResponseDto>.FailureResponse(
                 "Appointment time is invalid.",
@@ -113,9 +133,9 @@ public class ServiceAppointmentService(
             ApplicationUserId = applicationUserId,
             VehicleId = dto.VehicleId,
             AppointmentDate = DateTime.SpecifyKind(
-                selectedDate.ToDateTime(TimeOnly.MinValue),
+                selectedDate!.Value.ToDateTime(TimeOnly.MinValue),
                 DateTimeKind.Utc),
-            AppointmentTime = selectedTime,
+            AppointmentTime = selectedTime!,
             AppointmentType = appointmentType,
             AppointmentStatus = ServiceAppointmentStatus.Pending,
             AppointmentNote = dto.AppointmentNote

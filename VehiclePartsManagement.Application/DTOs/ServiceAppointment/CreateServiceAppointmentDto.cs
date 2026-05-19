@@ -12,12 +12,10 @@ public class CreateServiceAppointmentDto
 
     public int? AppointmentSlotId { get; set; }
 
-    [Required]
-    public DateOnly AppointmentDate { get; set; }
+    public DateOnly? AppointmentDate { get; set; }
 
-    [Required]
     [MaxLength(20)]
-    public string AppointmentTime { get; set; } = string.Empty;
+    public string? AppointmentTime { get; set; }
 
     [Required]
     [MaxLength(50)]

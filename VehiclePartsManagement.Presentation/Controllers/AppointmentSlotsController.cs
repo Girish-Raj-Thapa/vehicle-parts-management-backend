@@ -10,13 +10,14 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/appointment-slots")]
-[Authorize(Roles = "Admin,Staff")]
+[Authorize]
 public class AppointmentSlotsController(IAppointmentSlotService appointmentSlotService) : ControllerBase
 {
     /// <summary>
     /// Returns paginated appointment slots with optional date and active filters.
     /// </summary>
     [HttpGet]
+    [Authorize(Roles = "Admin,Staff,Customer")]
     public async Task<IActionResult> GetSlots([FromQuery] AppointmentSlotListQueryDto query)
     {
         var result = await appointmentSlotService.GetSlotsAsync(query);
@@ -28,6 +29,7 @@ public class AppointmentSlotsController(IAppointmentSlotService appointmentSlotS
     /// Returns one appointment slot by id.
     /// </summary>
     [HttpGet("{appointmentSlotId:int}")]
+    [Authorize(Roles = "Admin,Staff,Customer")]
     public async Task<IActionResult> GetById(int appointmentSlotId)
     {
         var result = await appointmentSlotService.GetByIdAsync(appointmentSlotId);
@@ -39,6 +41,7 @@ public class AppointmentSlotsController(IAppointmentSlotService appointmentSlotS
     /// Creates a new appointment slot definition.
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> Create([FromBody] CreateAppointmentSlotDto dto)
     {
         var result = await appointmentSlotService.CreateAsync(dto);
@@ -56,6 +59,7 @@ public class AppointmentSlotsController(IAppointmentSlotService appointmentSlotS
     /// Updates an existing appointment slot definition.
     /// </summary>
     [HttpPut("{appointmentSlotId:int}")]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> Update(int appointmentSlotId, [FromBody] UpdateAppointmentSlotDto dto)
     {
         var result = await appointmentSlotService.UpdateAsync(appointmentSlotId, dto);
