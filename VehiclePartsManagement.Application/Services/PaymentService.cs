@@ -17,7 +17,8 @@ public class PaymentService(
     HttpClient httpClient,
     IOptions<KhaltiOptions> khaltiOptions,
     ISaleRepository saleRepository,
-    IPaymentRepository paymentRepository) : IPaymentService
+    IPaymentRepository paymentRepository,
+    ISaleService saleService) : IPaymentService
 {
     private const string CompletedStatus = "Completed";
     private readonly KhaltiOptions _khaltiOptions = khaltiOptions.Value;
@@ -240,9 +241,19 @@ public class PaymentService(
         saleRepository.Update(sale);
         await paymentRepository.SaveChangesAsync();
 
+        var message = "Khalti payment verified successfully.";
+        if (sale.SaleChannel == SaleChannel.OnlineParts)
+        {
+            var emailResult = await saleService.SendInvoiceEmailAsync(sale.SaleId);
+            if (!emailResult.Success)
+            {
+                message = "Khalti payment verified successfully. Invoice email could not be sent.";
+            }
+        }
+
         return ApiResponse<KhaltiVerifyResponseDto>.SuccessResponse(
             MapVerifyResponse(sale, lookup, payment.PaymentAmount),
-            "Khalti payment verified successfully.");
+            message);
     }
 
 
