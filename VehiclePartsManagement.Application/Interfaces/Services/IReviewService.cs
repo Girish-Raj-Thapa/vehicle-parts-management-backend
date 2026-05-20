@@ -12,4 +12,6 @@ public interface IReviewService
     Task<ApiResponse<List<ReviewListItemDto>>> GetAllAsync();
 
     Task<ApiResponse<List<FeaturedReviewListItemDto>>> GetFeaturedAsync(int limit = 10);
+
+    Task<ApiResponse<ReviewDetailDto>> GetByIdAsync(int reviewId, string? applicationUserId);
 }

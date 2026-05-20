@@ -20,6 +20,7 @@ public class ServiceRecordRepository(AppDbContext context)
             .ThenInclude(v => v.Model)
             .ThenInclude(m => m.Brand)
             .Include(sr => sr.ServiceAppointment)
+            .Include(sr => sr.Review)
             .Where(sr => sr.Vehicle.ApplicationUserId == customerUserId);
 
         if (vehicleId.HasValue)
@@ -51,6 +52,7 @@ public class ServiceRecordRepository(AppDbContext context)
             .ThenInclude(v => v.Model)
             .ThenInclude(m => m.Brand)
             .Include(sr => sr.ServiceAppointment)
+            .Include(sr => sr.Review)
             .FirstOrDefaultAsync(sr =>
                 sr.ServiceRecordId == serviceRecordId &&
                 sr.Vehicle.ApplicationUserId == customerUserId);

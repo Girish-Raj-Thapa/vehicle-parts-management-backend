@@ -708,7 +708,9 @@ public class UserService(
             LaborCharge = serviceRecord.LaborCharge,
             NextServiceDueDate = serviceRecord.NextServiceDueDate.HasValue
                 ? DateOnly.FromDateTime(serviceRecord.NextServiceDueDate.Value)
-                : null
+                : null,
+            HasReview = serviceRecord.Review is not null,
+            ReviewId = serviceRecord.Review?.ReviewId
         };
 
 

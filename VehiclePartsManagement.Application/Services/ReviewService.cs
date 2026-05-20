@@ -35,6 +35,16 @@ public class ReviewService(IReviewRepository reviewRepository) : IReviewService
                 });
         }
 
+        if (!await reviewRepository.IsCompletedServiceRecordForUserAsync(dto.ServiceRecordId, applicationUserId))
+        {
+            return ApiResponse<ReviewCreateResponseDto>.FailureResponse(
+                "Review can only be submitted for completed services.",
+                new Dictionary<string, List<string>>
+                {
+                    { "serviceRecordId", ["Review can only be submitted for completed services."] }
+                });
+        }
+
         if (await reviewRepository.ExistsByServiceRecordIdAsync(dto.ServiceRecordId))
         {
             return ApiResponse<ReviewCreateResponseDto>.FailureResponse(
@@ -99,6 +109,26 @@ public class ReviewService(IReviewRepository reviewRepository) : IReviewService
     }
 
 
+    /// <summary>
+    /// Returns one review detail, optionally constrained to customer ownership.
+    /// </summary>
+    public async Task<ApiResponse<ReviewDetailDto>> GetByIdAsync(int reviewId, string? applicationUserId)
+    {
+        var review = string.IsNullOrWhiteSpace(applicationUserId)
+            ? await reviewRepository.GetByIdWithDetailsAsync(reviewId)
+            : await reviewRepository.GetByIdForUserAsync(reviewId, applicationUserId);
+
+        if (review is null)
+        {
+            return ApiResponse<ReviewDetailDto>.FailureResponse("Review not found.");
+        }
+
+        return ApiResponse<ReviewDetailDto>.SuccessResponse(
+            MapDetailItem(review),
+            "Review retrieved successfully");
+    }
+
+
     private static ReviewListItemDto MapListItem(Review review) =>
         new()
         {
@@ -118,5 +148,18 @@ public class ReviewService(IReviewRepository reviewRepository) : IReviewService
             VehicleName = $"{review.ServiceRecord.Vehicle.Model.Brand.BrandName} {review.ServiceRecord.Vehicle.Model.ModelName}",
             Rating = review.Rating,
             ReviewComment = review.ReviewComment
+        };
+
+
+    private static ReviewDetailDto MapDetailItem(Review review) =>
+        new()
+        {
+            ReviewId = review.ReviewId,
+            ServiceRecordId = review.ServiceRecordId,
+            CustomerName = review.User.FullName,
+            VehicleName = $"{review.ServiceRecord.Vehicle.Model.Brand.BrandName} {review.ServiceRecord.Vehicle.Model.ModelName}",
+            Rating = review.Rating,
+            ReviewComment = review.ReviewComment,
+            ReviewDate = DateOnly.FromDateTime(review.ReviewDate)
         };
 }

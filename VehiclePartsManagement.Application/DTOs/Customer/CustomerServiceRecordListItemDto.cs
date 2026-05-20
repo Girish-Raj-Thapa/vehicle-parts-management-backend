@@ -14,4 +14,6 @@ public class CustomerServiceRecordListItemDto
     public int MileageAtService { get; set; }
     public decimal LaborCharge { get; set; }
     public DateOnly? NextServiceDueDate { get; set; }
+    public bool HasReview { get; set; }
+    public int? ReviewId { get; set; }
 }

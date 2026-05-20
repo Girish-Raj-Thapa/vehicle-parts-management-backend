@@ -57,6 +57,24 @@ public class ReviewsController(IReviewService reviewService) : ControllerBase
     }
 
 
+    /// <summary>
+    /// Returns one review detail; customer access is constrained to own reviews.
+    /// </summary>
+    [HttpGet("{reviewId:int}")]
+    [Authorize(Roles = "Admin,Staff,Customer")]
+    public async Task<IActionResult> GetById(int reviewId)
+    {
+        var scopedUserId = User.IsInRole("Customer") ? GetCurrentUserId() : null;
+        if (User.IsInRole("Customer") && string.IsNullOrWhiteSpace(scopedUserId))
+        {
+            return Unauthorized(ApiResponse.FailureResponse("Unauthorized."));
+        }
+
+        var result = await reviewService.GetByIdAsync(reviewId, scopedUserId);
+        return result.Success ? Ok(result) : NotFound(result);
+    }
+
+
     private string? GetCurrentUserId() =>
         User.FindFirstValue(JwtRegisteredClaimNames.Sub)
         ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
