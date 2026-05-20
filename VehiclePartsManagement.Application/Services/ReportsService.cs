@@ -6,7 +6,7 @@ using VehiclePartsManagement.Domain.Enums;
 
 namespace VehiclePartsManagement.Application.Services;
 
-public class ReportService(IReportRepository reportRepository) : IReportService
+public class ReportsService(IReportsRepository reportsRepository) : IReportsService
 {
     public async Task<ApiResponse<SalesRevenueReportResponseDto>> GetSalesRevenueReportAsync(ReportQueryDto query)
     {
@@ -25,7 +25,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
 
         var effectiveGroupBy = groupBy ?? "day";
 
-        var sales = await reportRepository.GetSalesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
+        var sales = await reportsRepository.GetSalesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
         if (!string.IsNullOrWhiteSpace(query.CustomerId))
         {
             sales = sales.Where(s => s.CustomerApplicationUserId == query.CustomerId).ToList();
@@ -88,7 +88,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
         }
         var effectiveGroupBy = groupBy ?? "day";
         
-        var purchases = await reportRepository.GetPurchasesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
+        var purchases = await reportsRepository.GetPurchasesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
         if (query.VendorId.HasValue)
         {
             purchases = purchases.Where(p => p.VendorId == query.VendorId.Value).ToList();
@@ -162,7 +162,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
     private async Task<ApiResponse<ReportDateRangeDto>> ValidateAndResolvePurchaseExpenseRangeAsync(DateTime? from, DateTime? to, string? groupBy)
     {
         var nowUtc = DateTime.UtcNow;
-        var allTimeStart = await reportRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
+        var allTimeStart = await reportsRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
 
         DateTime resolvedFrom;
         DateTime rawTo;
@@ -233,13 +233,13 @@ public class ReportService(IReportRepository reportRepository) : IReportService
         }
         var effectiveGroupBy = groupBy ?? "day";
 
-        var payments = await reportRepository.GetPaymentsWithSaleAsync(range.FromUtc, range.ToUtc);
+        var payments = await reportsRepository.GetPaymentsWithSaleAsync(range.FromUtc, range.ToUtc);
         if (!string.IsNullOrWhiteSpace(query.CustomerId))
         {
             payments = payments.Where(p => p.Sale.CustomerApplicationUserId == query.CustomerId).ToList();
         }
 
-        var salesInRange = await reportRepository.GetSalesWithBalancesAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
+        var salesInRange = await reportsRepository.GetSalesWithBalancesAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
         if (!string.IsNullOrWhiteSpace(query.CustomerId))
         {
             salesInRange = salesInRange.Where(s => s.CustomerApplicationUserId == query.CustomerId).ToList();
@@ -310,7 +310,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
     private async Task<ApiResponse<ReportDateRangeDto>> ValidateAndResolvePaymentCollectionRangeAsync(DateTime? from, DateTime? to, string? groupBy)
     {
         var nowUtc = DateTime.UtcNow;
-        var allTimeStart = await reportRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
+        var allTimeStart = await reportsRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
 
         DateTime resolvedFrom;
         DateTime rawTo;
@@ -384,7 +384,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
         var overdueDays = query.OverdueDays <= 0 ? 30 : query.OverdueDays;
         var overdueThreshold = DateTime.UtcNow.Date.AddDays(-overdueDays);
 
-        var sales = await reportRepository.GetSalesWithBalancesAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
+        var sales = await reportsRepository.GetSalesWithBalancesAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
         sales = sales.Where(s => s.BalanceDue > 0).ToList();
 
         if (!string.IsNullOrWhiteSpace(query.CustomerId))
@@ -446,7 +446,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
     private async Task<ApiResponse<ReportDateRangeDto>> ValidateAndResolveReceivableRangeAsync(DateTime? from, DateTime? to, string? groupBy)
     {
         var nowUtc = DateTime.UtcNow;
-        var allTimeStart = await reportRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
+        var allTimeStart = await reportsRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
 
         DateTime resolvedFrom;
         DateTime rawTo;
@@ -517,9 +517,9 @@ public class ReportService(IReportRepository reportRepository) : IReportService
 
         var effectiveGroupBy = groupBy ?? "day";
 
-        var sales = await reportRepository.GetSalesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
-        var purchases = await reportRepository.GetPurchasesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
-        var services = await reportRepository.GetServiceRecordsAsync(range.FromUtc, range.ToUtc);
+        var sales = await reportsRepository.GetSalesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
+        var purchases = await reportsRepository.GetPurchasesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
+        var services = await reportsRepository.GetServiceRecordsAsync(range.FromUtc, range.ToUtc);
 
         if (!string.IsNullOrWhiteSpace(query.CustomerId))
         {
@@ -593,7 +593,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
     private async Task<ApiResponse<ReportDateRangeDto>> ValidateAndResolveProfitLossRangeAsync(DateTime? from, DateTime? to, string? groupBy)
     {
         var nowUtc = DateTime.UtcNow;
-        var allTimeStart = await reportRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
+        var allTimeStart = await reportsRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
 
         DateTime resolvedFrom;
         DateTime rawTo;
@@ -663,8 +663,8 @@ public class ReportService(IReportRepository reportRepository) : IReportService
         }
         var effectiveGroupBy = groupBy ?? "day";
 
-        var payments = await reportRepository.GetPaymentsWithSaleAsync(range.FromUtc, range.ToUtc);
-        var purchases = await reportRepository.GetPurchasesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
+        var payments = await reportsRepository.GetPaymentsWithSaleAsync(range.FromUtc, range.ToUtc);
+        var purchases = await reportsRepository.GetPurchasesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
 
         if (!string.IsNullOrWhiteSpace(query.CustomerId))
         {
@@ -738,7 +738,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
     private async Task<ApiResponse<ReportDateRangeDto>> ValidateAndResolveDailyCashFlowRangeAsync(DateTime? from, DateTime? to, string? groupBy)
     {
         var nowUtc = DateTime.UtcNow;
-        var allTimeStart = await reportRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
+        var allTimeStart = await reportsRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
 
         DateTime resolvedFrom;
         DateTime rawTo;
@@ -808,7 +808,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
         }
         var effectiveGroupBy = groupBy ?? "day";
 
-        var sales = await reportRepository.GetSalesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
+        var sales = await reportsRepository.GetSalesWithDetailsAsync(range.FromUtc, range.ToUtc, query.IncludeCancelled);
         if (!string.IsNullOrWhiteSpace(query.CustomerId))
         {
             sales = sales.Where(s => s.CustomerApplicationUserId == query.CustomerId).ToList();
@@ -861,7 +861,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
     private async Task<ApiResponse<ReportDateRangeDto>> ValidateAndResolveDiscountRangeAsync(DateTime? from, DateTime? to, string? groupBy)
     {
         var nowUtc = DateTime.UtcNow;
-        var allTimeStart = await reportRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
+        var allTimeStart = await reportsRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
 
         DateTime resolvedFrom;
         DateTime rawTo;
@@ -936,13 +936,13 @@ public class ReportService(IReportRepository reportRepository) : IReportService
         var summaryStart = range.FromUtc;
         var summaryEnd = range.ToUtc;
 
-        var monthSales = await reportRepository.GetSalesWithDetailsAsync(summaryStart, summaryEnd, includeCancelled: query.IncludeCancelled);
-        var monthPurchases = await reportRepository.GetPurchasesWithDetailsAsync(summaryStart, summaryEnd, includeCancelled: query.IncludeCancelled);
-        var monthPayments = await reportRepository.GetPaymentsWithSaleAsync(summaryStart, summaryEnd);
-        var monthServices = await reportRepository.GetServiceRecordsAsync(summaryStart, summaryEnd);
-        var outstandingSales = await reportRepository.GetSalesWithBalancesAsync(summaryStart, summaryEnd, query.IncludeCancelled);
+        var monthSales = await reportsRepository.GetSalesWithDetailsAsync(summaryStart, summaryEnd, includeCancelled: query.IncludeCancelled);
+        var monthPurchases = await reportsRepository.GetPurchasesWithDetailsAsync(summaryStart, summaryEnd, includeCancelled: query.IncludeCancelled);
+        var monthPayments = await reportsRepository.GetPaymentsWithSaleAsync(summaryStart, summaryEnd);
+        var monthServices = await reportsRepository.GetServiceRecordsAsync(summaryStart, summaryEnd);
+        var outstandingSales = await reportsRepository.GetSalesWithBalancesAsync(summaryStart, summaryEnd, query.IncludeCancelled);
         outstandingSales = outstandingSales.Where(s => s.BalanceDue > 0).ToList();
-        var lowStockParts = await reportRepository.GetLowStockPartsAsync();
+        var lowStockParts = await reportsRepository.GetLowStockPartsAsync();
 
         if (!string.IsNullOrWhiteSpace(query.CustomerId))
         {
@@ -1045,7 +1045,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
     private async Task<ApiResponse<ReportDateRangeDto>> ValidateAndResolveSalesRevenueRangeAsync(DateTime? from, DateTime? to, string? groupBy)
     {
         var nowUtc = DateTime.UtcNow;
-        var allTimeStart = await reportRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
+        var allTimeStart = await reportsRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
 
         DateTime resolvedFrom;
         DateTime rawTo;
@@ -1102,7 +1102,7 @@ public class ReportService(IReportRepository reportRepository) : IReportService
     private async Task<ApiResponse<ReportDateRangeDto>> ValidateAndResolveSummaryRangeAsync(DateTime? from, DateTime? to, string? groupBy)
     {
         var nowUtc = DateTime.UtcNow;
-        var allTimeStart = await reportRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
+        var allTimeStart = await reportsRepository.GetDashboardStartDateUtcAsync() ?? nowUtc;
         DateTime resolvedFrom;
         DateTime rawTo;
 
@@ -1239,19 +1239,19 @@ public class ReportService(IReportRepository reportRepository) : IReportService
         };
     public async Task<ApiResponse<IEnumerable<RegularCustomerReportDto>>> GetRegularCustomersAsync()
     {
-        var data = await reportRepository.GetRegularCustomersAsync();
-        return ApiResponse<IEnumerable<RegularCustomerReportDto>>.SuccessResponse(data, "Regular customers report retrieved successfully");
+        var data = await reportsRepository.GetRegularCustomersAsync();
+        return ApiResponse<IEnumerable<RegularCustomerReportDto>>.SuccessResponse(data, "Regular customers reports retrieved successfully");
     }
 
     public async Task<ApiResponse<IEnumerable<TopSpenderReportDto>>> GetTopSpendersAsync()
     {
-        var data = await reportRepository.GetTopSpendersAsync();
-        return ApiResponse<IEnumerable<TopSpenderReportDto>>.SuccessResponse(data, "Top spenders report retrieved successfully");
+        var data = await reportsRepository.GetTopSpendersAsync();
+        return ApiResponse<IEnumerable<TopSpenderReportDto>>.SuccessResponse(data, "Top spenders reports retrieved successfully");
     }
 
     public async Task<ApiResponse<IEnumerable<PendingCreditReportDto>>> GetPendingCreditsAsync()
     {
-        var data = await reportRepository.GetPendingCreditsAsync();
-        return ApiResponse<IEnumerable<PendingCreditReportDto>>.SuccessResponse(data, "Pending credits report retrieved successfully");
+        var data = await reportsRepository.GetPendingCreditsAsync();
+        return ApiResponse<IEnumerable<PendingCreditReportDto>>.SuccessResponse(data, "Pending credits reports retrieved successfully");
     }
 }

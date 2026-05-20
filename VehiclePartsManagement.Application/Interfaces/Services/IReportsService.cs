@@ -6,7 +6,7 @@ namespace VehiclePartsManagement.Application.Interfaces.Services;
 /// <summary>
 /// Exposes business-level operations for generating financial reports.
 /// </summary>
-public interface IReportService
+public interface IReportsService
 {
     /// <summary>
     /// Generates the sales revenue report for the requested filter range.

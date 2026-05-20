@@ -367,6 +367,42 @@ public static class DataSeeder
             });
         }
 
+        // Seed appointment for customer (awantikapokharel46@gmail.com) to allow easy testing of invoice creation
+        var testApt = await context.ServiceAppointments.FirstOrDefaultAsync(sa =>
+            sa.ApplicationUserId == customer.Id &&
+            sa.AppointmentNote == "TEST-ONLINE-APT-DONE");
+
+        if (testApt == null)
+        {
+            testApt = new ServiceAppointment
+            {
+                ApplicationUserId = customer.Id,
+                VehicleId = vehicle.VehicleId,
+                AppointmentDate = DateTime.UtcNow.AddDays(-1),
+                AppointmentTime = "11:00 AM",
+                AppointmentStatus = ServiceAppointmentStatus.Completed,
+                AppointmentType = ServiceAppointmentType.Maintenance,
+                AppointmentNote = "TEST-ONLINE-APT-DONE"
+            };
+            context.ServiceAppointments.Add(testApt);
+            await context.SaveChangesAsync();
+
+            // Seed service record for this appointment as well
+            context.ServiceRecords.Add(new ServiceRecord
+            {
+                ServiceAppointmentId = testApt.ServiceAppointmentId,
+                VehicleId = vehicle.VehicleId,
+                ServiceDate = testApt.AppointmentDate,
+                ServiceType = testApt.AppointmentType.ToString(),
+                Diagnosis = "Routine annual inspection and tuning for online payment testing.",
+                WorkDone = "Completed general checkup, fluid level adjustment, and filter checks.",
+                MileageAtService = 24500,
+                LaborCharge = 1500m,
+                NextServiceDueDate = testApt.AppointmentDate.AddMonths(6)
+            });
+            await context.SaveChangesAsync();
+        }
+
         await context.SaveChangesAsync();
     }
 }

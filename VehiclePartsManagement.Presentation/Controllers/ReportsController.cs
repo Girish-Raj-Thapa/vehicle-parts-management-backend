@@ -8,7 +8,7 @@ namespace VehiclePartsManagement.Presentation.Controllers;
 [ApiController]
 [Route("api/reports")]
 public class ReportsController(
-    IReportService reportService) : ControllerBase
+    IReportsService reportsService) : ControllerBase
 {
     [Authorize(Roles = "Admin")]
     [HttpGet("admin/sales-revenue")]
@@ -19,7 +19,7 @@ public class ReportsController(
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetSalesRevenueReportAsync(query);
+        var result = await reportsService.GetSalesRevenueReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -33,7 +33,7 @@ public class ReportsController(
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetPurchaseExpenseReportAsync(query);
+        var result = await reportsService.GetPurchaseExpenseReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -47,7 +47,7 @@ public class ReportsController(
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetPaymentCollectionReportAsync(query);
+        var result = await reportsService.GetPaymentCollectionReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -61,7 +61,7 @@ public class ReportsController(
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetReceivableReportAsync(query);
+        var result = await reportsService.GetReceivableReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -75,7 +75,7 @@ public class ReportsController(
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetProfitLossReportAsync(query);
+        var result = await reportsService.GetProfitLossReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -89,7 +89,7 @@ public class ReportsController(
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetDailyCashFlowReportAsync(query);
+        var result = await reportsService.GetDailyCashFlowReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -103,7 +103,7 @@ public class ReportsController(
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetDiscountReportAsync(query);
+        var result = await reportsService.GetDiscountReportAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -117,28 +117,28 @@ public class ReportsController(
             query.GroupBy = string.Empty;
         }
 
-        var result = await reportService.GetDashboardSummaryAsync(query);
+        var result = await reportsService.GetDashboardSummaryAsync(query);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
     [HttpGet("customers/regulars")]
     public async Task<IActionResult> GetRegularCustomers()
     {
-        var response = await reportService.GetRegularCustomersAsync();
+        var response = await reportsService.GetRegularCustomersAsync();
         return Ok(response);
     }
 
     [HttpGet("customers/top-spenders")]
     public async Task<IActionResult> GetTopSpenders()
     {
-        var response = await reportService.GetTopSpendersAsync();
+        var response = await reportsService.GetTopSpendersAsync();
         return Ok(response);
     }
 
     [HttpGet("customers/pending-credits")]
     public async Task<IActionResult> GetPendingCredits()
     {
-        var response = await reportService.GetPendingCreditsAsync();
+        var response = await reportsService.GetPendingCreditsAsync();
         return Ok(response);
     }
 }

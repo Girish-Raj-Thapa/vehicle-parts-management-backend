@@ -69,7 +69,7 @@ public static class DependencyInjection
         services.AddScoped<IServiceRecordService, ServiceRecordService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IPartRequestService, PartRequestService>();
-        services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<IReportsService, ReportsService>();
         services.AddScoped<IReportPdfService, ReportPdfService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
@@ -90,7 +90,7 @@ public static class DependencyInjection
         services.AddScoped<IServiceRecordRepository, ServiceRecordRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IPartRequestRepository, PartRequestRepository>();
-        services.AddScoped<IReportRepository, ReportRepository>();
+        services.AddScoped<IReportsRepository, ReportsRepository>();
         services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
 
         AddJwtAuthentication(services, configuration);

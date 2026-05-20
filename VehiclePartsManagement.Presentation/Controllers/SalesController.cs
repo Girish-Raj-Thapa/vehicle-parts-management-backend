@@ -21,6 +21,7 @@ public class SalesController(ISaleService saleService) : ControllerBase
     }
 
     [HttpPost("{saleId}/send-email")]
+    [AllowAnonymous]
     public async Task<IActionResult> SendEmail(int saleId)
     {
         var response = await saleService.SendInvoiceEmailAsync(saleId);

@@ -6,7 +6,7 @@ namespace VehiclePartsManagement.Application.Interfaces.Repositories;
 /// <summary>
 /// Provides read-only data access queries required for financial reporting.
 /// </summary>
-public interface IReportRepository
+public interface IReportsRepository
 {
     /// <summary>
     /// Returns sales records with related details within the date range.

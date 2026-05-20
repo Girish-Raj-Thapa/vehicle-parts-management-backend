@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using VehiclePartsManagement.Application.Common;
+using VehiclePartsManagement.Application.DTOs.Payment;
 using VehiclePartsManagement.Application.DTOs.Sale;
 using VehiclePartsManagement.Application.DTOs.Sales;
 using VehiclePartsManagement.Application.Interfaces.Repositories;
@@ -8,6 +9,9 @@ using VehiclePartsManagement.Application.Interfaces.Services;
 using VehiclePartsManagement.Application.Services.EmailTemplates;
 using VehiclePartsManagement.Domain.Entities;
 using VehiclePartsManagement.Domain.Enums;
+
+using Microsoft.Extensions.Options;
+using VehiclePartsManagement.Application.Config;
 
 namespace VehiclePartsManagement.Application.Services;
 
@@ -18,8 +22,12 @@ public class SaleService(
     IPartRepository partRepository,
     IVehicleRepository vehicleRepository,
     IStockMovementRepository stockMovementRepository,
-    UserManager<ApplicationUser> userManager) : ISaleService
+    UserManager<ApplicationUser> userManager,
+    IPaymentService paymentService,
+    IOptions<KhaltiOptions> khaltiOptions) : ISaleService
 {
+    private readonly KhaltiOptions _khaltiOptions = khaltiOptions.Value;
+
     public async Task<ApiResponse<IEnumerable<SaleSummaryDto>>> GetAllSalesAsync()
     {
         var sales = await saleRepository.GetAllSalesAsync();
@@ -46,8 +54,15 @@ public class SaleService(
         if (string.IsNullOrEmpty(sale.CustomerUser?.Email))
             return ApiResponse.FailureResponse("Customer email not found");
 
+        string? paymentUrl = null;
+        if (sale.BalanceDue > 0)
+        {
+            // Direct endpoint that dynamically initiates Khalti checkout and redirects the user
+            paymentUrl = _khaltiOptions.ReturnUrl.Replace("/khalti/callback", $"/khalti/pay/{sale.SaleId}");
+        }
+
         var subject = $"Invoice for Sale #{sale.SaleInvoiceNo}";
-        var body = InvoiceEmailTemplateBuilder.Build(sale);
+        var body = GenerateInvoiceEmailBody(sale, paymentUrl);
 
         var sent = await emailService.SendEmailAsync(sale.CustomerUser.Email, subject, body);
 
@@ -56,6 +71,272 @@ public class SaleService(
             : ApiResponse.FailureResponse("Failed to send invoice email");
     }
 
+    private string GenerateInvoiceEmailBody(Domain.Entities.Sale sale, string? paymentUrl)
+    {
+        var paidAmount = sale.Payments?.Sum(p => p.PaymentAmount) ?? 0m;
+        
+        var utcSaleDate = sale.SaleDate.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(sale.SaleDate, DateTimeKind.Utc)
+            : sale.SaleDate.ToUniversalTime();
+
+        TimeZoneInfo nepalZone;
+        try
+        {
+            nepalZone = TimeZoneInfo.FindSystemTimeZoneById("Nepal Standard Time");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            nepalZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kathmandu");
+        }
+        var nepalSaleDate = TimeZoneInfo.ConvertTime(utcSaleDate, nepalZone);
+        
+        var statusText = sale.PaymentStatus.ToString();
+        var statusBg = "#f3f4f6";
+        var statusColor = "#374151";
+        
+        if (sale.PaymentStatus == PaymentStatus.Paid)
+        {
+            statusBg = "#dcfce7";
+            statusColor = "#15803d";
+        }
+        else if (sale.PaymentStatus == PaymentStatus.Overdue)
+        {
+            statusBg = "#fee2e2";
+            statusColor = "#b91c1c";
+        }
+        else if (sale.PaymentStatus == PaymentStatus.PartiallyPaid)
+        {
+            statusText = "Partial";
+            statusBg = "#f3f4f6";
+            statusColor = "#374151";
+        }
+
+        var dueDateText = sale.DueDate.HasValue 
+            ? sale.DueDate.Value.ToString("MMMM dd, yyyy") 
+            : "-";
+
+        var sb = new StringBuilder();
+        
+        sb.AppendLine("<!DOCTYPE html>");
+        sb.AppendLine("<html>");
+        sb.AppendLine("<head>");
+        sb.AppendLine("  <meta charset='utf-8'>");
+        sb.AppendLine("  <meta name='viewport' content='width=device-width, initial-scale=1.0'>");
+        sb.AppendLine("  <title>Sales Invoice</title>");
+        sb.AppendLine("  <style>");
+        sb.AppendLine("    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');");
+        sb.AppendLine("    body { margin: 0; padding: 0; background-color: #ffffff; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }");
+        sb.AppendLine("    table { border-collapse: collapse; width: 100%; }");
+        sb.AppendLine("  </style>");
+        sb.AppendLine("</head>");
+        sb.AppendLine("<body>");
+        sb.AppendLine("  <table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #ffffff;'>");
+        sb.AppendLine("    <tr>");
+        sb.AppendLine("      <td align='center' style='padding: 24px 16px;'>");
+        sb.AppendLine("        <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 680px; text-align: left;'>");
+        
+        // --- HEADER SECTION ---
+        sb.AppendLine("          <tr>");
+        sb.AppendLine("            <td>");
+        sb.AppendLine("              <table border='0' cellpadding='0' cellspacing='0' width='100%'>");
+        sb.AppendLine("                <tr>");
+        // Left Column (Torquex & Title)
+        sb.AppendLine("                  <td valign='top' style='padding-bottom: 24px;'>");
+        sb.AppendLine("                    <div style=\"font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 800; color: #2563eb; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 8px;\">TORQUEX</div>");
+        sb.AppendLine("                    <h1 style=\"font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 700; color: #111827; margin: 0 0 4px 0; line-height: 1.1;\">Sales Invoice</h1>");
+        sb.AppendLine("                    <p style='font-size: 13px; color: #6b7280; margin: 0;'>Premium vehicle parts and service billing</p>");
+        sb.AppendLine("                  </td>");
+        // Right Column (Invoice Number Info Card)
+        sb.AppendLine("                  <td valign='top' align='right' style='padding-bottom: 24px; width: 240px;'>");
+        sb.AppendLine("                    <table border='0' cellpadding='0' cellspacing='0' style='background-color: #f3f4f6; border-radius: 12px; width: 100%;'>");
+        sb.AppendLine("                      <tr>");
+        sb.AppendLine("                        <td style='padding: 16px 20px; text-align: left;'>");
+        sb.AppendLine("                          <div style='font-size: 9px; font-weight: 700; color: #9ca3af; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 2px;'>INVOICE NUMBER</div>");
+        sb.AppendLine($"                          <div style=\"font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 12px; word-break: break-all;\">{sale.SaleInvoiceNo}</div>");
+        sb.AppendLine("                          <div style='font-size: 9px; font-weight: 700; color: #9ca3af; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 2px;'>ISSUE DATE</div>");
+        sb.AppendLine($"                          <div style=\"font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: #111827;\">{nepalSaleDate:MMMM dd, yyyy}</div>");
+        sb.AppendLine("                        </td>");
+        sb.AppendLine("                      </tr>");
+        sb.AppendLine("                    </table>");
+        sb.AppendLine("                  </td>");
+        sb.AppendLine("                </tr>");
+        sb.AppendLine("              </table>");
+        sb.AppendLine("            </td>");
+        sb.AppendLine("          </tr>");
+        
+        // --- PAYMENT STATUS SECTION ---
+        sb.AppendLine("          <tr>");
+        sb.AppendLine("            <td style='padding-bottom: 16px;'>");
+        sb.AppendLine("              <table border='0' cellpadding='0' cellspacing='0'>");
+        sb.AppendLine("                <tr>");
+        sb.AppendLine("                  <td valign='middle' style=\"font-size: 9px; font-weight: 700; color: #9ca3af; letter-spacing: 0.05em; text-transform: uppercase; padding-right: 12px;\">PAYMENT STATUS</td>");
+        sb.AppendLine($"                  <td valign='middle' style='background-color: {statusBg}; color: {statusColor}; border-radius: 9999px; padding: 4px 12px; font-size: 11px; font-weight: 600; display: inline-block; margin-right: 8px;'>{statusText}</td>");
+        sb.AppendLine($"                  <td valign='middle' style='background-color: #f3f4f6; color: #374151; border-radius: 9999px; padding: 4px 12px; font-size: 11px; font-weight: 600; display: inline-block;'>Due: {dueDateText}</td>");
+        sb.AppendLine("                </tr>");
+        sb.AppendLine("              </table>");
+        sb.AppendLine("            </td>");
+        sb.AppendLine("          </tr>");
+        
+        // --- DIVIDER LINE ---
+        sb.AppendLine("          <tr>");
+        sb.AppendLine("            <td>");
+        sb.AppendLine("              <div style='border-top: 1px solid #f3f4f6; margin: 16px 0 24px 0;'></div>");
+        sb.AppendLine("            </td>");
+        sb.AppendLine("          </tr>");
+        
+        // --- CUSTOMER & VEHICLE AND TOTALS SECTION ---
+        sb.AppendLine("          <tr>");
+        sb.AppendLine("            <td style='padding-bottom: 32px;'>");
+        sb.AppendLine("              <table border='0' cellpadding='0' cellspacing='0' width='100%'>");
+        sb.AppendLine("                <tr>");
+        // Left Column: Customer & Vehicle (56% width)
+        sb.AppendLine("                  <td valign='top' style='width: 56%; padding-right: 24px;'>");
+        sb.AppendLine("                    <h2 style=\"font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #111827; margin: 0 0 16px 0;\">Customer & Vehicle</h2>");
+        sb.AppendLine("                    <table border='0' cellpadding='0' cellspacing='0' width='100%'>");
+        sb.AppendLine("                      <tr>");
+        // Customer detail block
+        sb.AppendLine("                        <td valign='top' style='width: 50%; padding-right: 12px;'>");
+        sb.AppendLine("                          <div style='font-size: 9px; font-weight: 700; color: #9ca3af; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px;'>CUSTOMER</div>");
+        sb.AppendLine($"                          <div style='font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 2px;'>{sale.CustomerUser?.FullName}</div>");
+        sb.AppendLine($"                          <div style='font-size: 12px; color: #6b7280; margin-bottom: 1px; word-break: break-all;'>{sale.CustomerUser?.Email}</div>");
+        sb.AppendLine($"                          <div style='font-size: 12px; color: #6b7280;'>{sale.CustomerUser?.PhoneNumber}</div>");
+        sb.AppendLine("                        </td>");
+        // Vehicle detail block
+        sb.AppendLine("                        <td valign='top' style='width: 50%;'>");
+        sb.AppendLine("                          <div style='font-size: 9px; font-weight: 700; color: #9ca3af; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px;'>VEHICLE</div>");
+        sb.AppendLine($"                          <div style='font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 2px;'>{sale.Vehicle?.VehicleNumber}</div>");
+        sb.AppendLine($"                          <div style='font-size: 12px; color: #6b7280;'>{sale.Vehicle?.Model?.Brand?.BrandName} {sale.Vehicle?.Model?.ModelName}</div>");
+        sb.AppendLine("                        </td>");
+        sb.AppendLine("                      </tr>");
+        sb.AppendLine("                    </table>");
+        sb.AppendLine("                  </td>");
+        
+        // Right Column: Totals Card (44% width)
+        sb.AppendLine("                  <td valign='top' style='width: 44%;'>");
+        sb.AppendLine("                    <table border='0' cellpadding='0' cellspacing='0' style='background-color: #f9fafb; border-radius: 16px; border: 1px solid #f3f4f6; width: 100%;'>");
+        sb.AppendLine("                      <tr>");
+        sb.AppendLine("                        <td style='padding: 20px;'>");
+        sb.AppendLine("                          <div style='font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 14px;'>Totals</div>");
+        sb.AppendLine("                          <table border='0' cellpadding='0' cellspacing='0' width='100%'>");
+        
+        // Sub total
+        sb.AppendLine("                            <tr>");
+        sb.AppendLine("                              <td style='font-size: 12px; color: #6b7280; padding: 4px 0;'>Sub total</td>");
+        sb.AppendLine($"                              <td align='right' style='font-size: 13px; font-weight: 600; color: #111827; padding: 4px 0;'>Rs. {sale.SubTotal:N0}</td>");
+        sb.AppendLine("                            </tr>");
+        
+        // Loyalty discount
+        sb.AppendLine("                            <tr>");
+        sb.AppendLine($"                              <td style='font-size: 12px; color: #6b7280; padding: 4px 0;'>Loyalty discount ({sale.LoyaltyDiscountPercent:0}%)</td>");
+        sb.AppendLine($"                              <td align='right' style='font-size: 13px; font-weight: 600; color: #111827; padding: 4px 0;'>- Rs. {sale.DiscountAmount:N0}</td>");
+        sb.AppendLine("                            </tr>");
+        
+        // Divider
+        sb.AppendLine("                            <tr>");
+        sb.AppendLine("                              <td colspan='2' style='padding: 8px 0;'>");
+        sb.AppendLine("                                <div style='border-top: 1px solid #f3f4f6;'></div>");
+        sb.AppendLine("                              </td>");
+        sb.AppendLine("                            </tr>");
+        
+        // Total
+        sb.AppendLine("                            <tr>");
+        sb.AppendLine("                              <td style='font-size: 13px; font-weight: 600; color: #111827; padding: 4px 0;'>Total</td>");
+        sb.AppendLine($"                              <td align='right' style=\"font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #111827; padding: 4px 0;\">Rs. {sale.TotalAmount:N0}</td>");
+        sb.AppendLine("                            </tr>");
+        
+        // Paid
+        sb.AppendLine("                            <tr>");
+        sb.AppendLine("                              <td style='font-size: 12px; color: #6b7280; padding: 4px 0;'>Paid</td>");
+        sb.AppendLine($"                              <td align='right' style='font-size: 13px; font-weight: 600; color: #111827; padding: 4px 0;'>Rs. {paidAmount:N0}</td>");
+        sb.AppendLine("                            </tr>");
+        
+        // Balance due
+        sb.AppendLine("                            <tr>");
+        sb.AppendLine("                              <td style='font-size: 13px; font-weight: 600; color: #111827; padding: 4px 0;'>Balance due</td>");
+        sb.AppendLine($"                              <td align='right' style=\"font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #111827; padding: 4px 0;\">Rs. {sale.BalanceDue:N0}</td>");
+        sb.AppendLine("                            </tr>");
+        
+        sb.AppendLine("                          </table>");
+        sb.AppendLine("                        </td>");
+        sb.AppendLine("                      </tr>");
+        sb.AppendLine("                    </table>");
+        sb.AppendLine("                  </td>");
+        sb.AppendLine("                </tr>");
+        sb.AppendLine("              </table>");
+        sb.AppendLine("            </td>");
+        sb.AppendLine("          </tr>");
+        
+        // --- ITEMS SECTION ---
+        sb.AppendLine("          <tr>");
+        sb.AppendLine("            <td style='padding-bottom: 32px;'>");
+        sb.AppendLine("              <h2 style=\"font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #111827; margin: 0 0 16px 0;\">Items</h2>");
+        sb.AppendLine("              <table border='0' cellpadding='0' cellspacing='0' width='100%'>");
+        sb.AppendLine("                <thead>");
+        sb.AppendLine("                  <tr>");
+        sb.AppendLine("                    <th style='text-align: left; font-size: 9px; font-weight: 700; color: #9ca3af; letter-spacing: 0.05em; text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid #f3f4f6;'>PART</th>");
+        sb.AppendLine("                    <th style='text-align: center; font-size: 9px; font-weight: 700; color: #9ca3af; letter-spacing: 0.05em; text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid #f3f4f6;'>QUANTITY</th>");
+        sb.AppendLine("                    <th style='text-align: right; font-size: 9px; font-weight: 700; color: #9ca3af; letter-spacing: 0.05em; text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid #f3f4f6;'>UNIT PRICE</th>");
+        sb.AppendLine("                    <th style='text-align: right; font-size: 9px; font-weight: 700; color: #9ca3af; letter-spacing: 0.05em; text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid #f3f4f6;'>LINE TOTAL</th>");
+        sb.AppendLine("                  </tr>");
+        sb.AppendLine("                </thead>");
+        sb.AppendLine("                <tbody>");
+        
+        foreach (var item in sale.SaleItems)
+        {
+            sb.AppendLine("                  <tr>");
+            sb.AppendLine($"                    <td style='text-align: left; font-size: 13px; font-weight: 600; color: #111827; padding: 14px 12px; border-bottom: 1px solid #f3f4f6;'>{item.Part?.PartName}</td>");
+            sb.AppendLine($"                    <td align='center' style='font-size: 13px; color: #4b5563; padding: 14px 12px; border-bottom: 1px solid #f3f4f6;'>{item.QuantitySold}</td>");
+            sb.AppendLine($"                    <td align='right' style='font-size: 13px; color: #4b5563; padding: 14px 12px; border-bottom: 1px solid #f3f4f6;'>Rs. {item.UnitPriceAtSale:N0}</td>");
+            sb.AppendLine($"                    <td align='right' style='font-size: 13px; font-weight: 600; color: #111827; padding: 14px 12px; border-bottom: 1px solid #f3f4f6;'>Rs. {item.LineTotal:N0}</td>");
+            sb.AppendLine("                  </tr>");
+        }
+        
+        sb.AppendLine("                </tbody>");
+        sb.AppendLine("              </table>");
+        sb.AppendLine("            </td>");
+        sb.AppendLine("          </tr>");
+        
+        if (!string.IsNullOrEmpty(paymentUrl))
+        {
+            sb.AppendLine("          <!-- --- PAYMENT CTA SECTION --- -->");
+            sb.AppendLine("          <tr>");
+            sb.AppendLine("            <td style='padding-bottom: 32px;'>");
+            sb.AppendLine("              <table border='0' cellpadding='0' cellspacing='0' width='100%' style='background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 20px; border: 1px solid #bfdbfe;'>");
+            sb.AppendLine("                <tr>");
+            sb.AppendLine("                  <td style='padding: 24px; text-align: center;'>");
+            sb.AppendLine("                    <h3 style=\"font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: #1e3a8a; margin: 0 0 6px 0;\">Outstanding Balance Due</h3>");
+            sb.AppendLine($"                    <p style='font-size: 13px; color: #1e40af; margin: 0 0 16px 0;'>Settle your invoice balance of <strong>Rs. {sale.BalanceDue:N0}</strong> securely online via Khalti.</p>");
+            sb.AppendLine("                    <table border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>");
+            sb.AppendLine("                      <tr>");
+            sb.AppendLine($"                        <td align='center' style='border-radius: 9999px; background-color: #2563eb;'>");
+            sb.AppendLine($"                          <a href='{paymentUrl}' target='_blank' style=\"font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #ffffff; text-decoration: none; padding: 12px 32px; display: inline-block; letter-spacing: 0.05em; text-transform: uppercase;\">Pay Invoice Securely</a>");
+            sb.AppendLine("                        </td>");
+            sb.AppendLine("                      </tr>");
+            sb.AppendLine("                    </table>");
+            sb.AppendLine("                  </td>");
+            sb.AppendLine("                </tr>");
+            sb.AppendLine("              </table>");
+            sb.AppendLine("            </td>");
+            sb.AppendLine("          </tr>");
+        }
+        
+        // --- FOOTER NOTE / GREETING ---
+        sb.AppendLine("          <tr>");
+        sb.AppendLine("            <td style='padding-top: 16px; border-top: 1px solid #f3f4f6;'>");
+        sb.AppendLine("              <p style='font-size: 13px; color: #6b7280; margin: 0 0 4px 0;'>If you have any questions about this invoice, please reach out to our support.</p>");
+        sb.AppendLine("              <p style='font-size: 13px; font-weight: 600; color: #111827; margin: 0;'>Thank you for your business!</p>");
+        sb.AppendLine("            </td>");
+        sb.AppendLine("          </tr>");
+        
+        sb.AppendLine("        </table>");
+        sb.AppendLine("      </td>");
+        sb.AppendLine("    </tr>");
+        sb.AppendLine("  </table>");
+        sb.AppendLine("</body>");
+        sb.AppendLine("</html>");
+
+        return sb.ToString();
+    }
     private const decimal LoyaltyDiscountPercent = 10m;
     private const decimal LoyaltyThresholdAmount = 5000m;
 
@@ -241,6 +522,23 @@ public class SaleService(
 
         // Final save persists payment (if any), stock updates, and stock movements.
         await saleRepository.SaveChangesAsync();
+
+        // Automatically trigger secure Khalti payment link generation and send invoice email
+        // if payment method is Mobile Wallet. We do this asynchronously to keep the UI highly responsive.
+        if (paymentMethod == PaymentMethodType.MobileWallet)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await SendInvoiceEmailAsync(sale.SaleId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Auto Email Error] Failed to send automatic invoice email for sale {sale.SaleId}: {ex.Message}");
+                }
+            });
+        }
 
         return ApiResponse<SaleCreateResponseDto>.SuccessResponse(
             new SaleCreateResponseDto
