@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 using VehiclePartsManagement.Application.Common;
 using VehiclePartsManagement.Application.DTOs.Payment;
 using VehiclePartsManagement.Application.DTOs.Sale;
